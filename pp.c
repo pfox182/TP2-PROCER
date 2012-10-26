@@ -9,12 +9,18 @@
 #include <stdio.h>
 #include <stddef.h> //Contiene la constante NULL
 
-//TEST
 
 /*
  * Headers propios
  */
 #include "PP/LTS.h"
+
+
+/*
+ * Variables globales
+ */
+	unsigned int mps=1; //Maximo de procesos en el sistema
+	unsigned int mpp=10; //Valor de multiprogramacion
 
 int main(int argc, char *argv[])
 {
