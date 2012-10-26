@@ -17,8 +17,11 @@ int server_socket(char *puerto);
 void administrar_coneccion(int);
 void error(const char *msg);
 
+//Variables globales
+extern unsigned int mps,mpp; //Se usa extern para indicar que son variables globales de otro archivo
+
 void * LTS_funcion(void * var){
-	extern unsigned int mps,mpp; //Se usa extern para indicar que son variables globales de otro archivo
+
 	char *puerto="4545";
 
 	printf("Soy el hilo de LTS levantando el server.\n",mps);
