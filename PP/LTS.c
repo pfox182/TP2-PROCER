@@ -59,9 +59,8 @@ int server_socket(char *puerto)
               error("ERROR on binding");
      listen(sockfd,5);
      clilen = sizeof(cli_addr);
-     while (1) { //Inicio del proceso hijo
-         newsockfd = accept(sockfd,
-               (struct sockaddr *) &cli_addr, &clilen);
+     while (1) {
+         newsockfd = accept(sockfd,(struct sockaddr *) &cli_addr, &clilen);
          if (newsockfd < 0)
              error("ERROR on accept");
          pid = fork();
@@ -69,11 +68,12 @@ int server_socket(char *puerto)
              error("ERROR on fork");
          if (pid == 0)  {
              close(sockfd);
+             //Proceso hijo
              administrar_coneccion(newsockfd);
              exit(0);
          }
          else close(newsockfd);
-     }  //fin del proceso hijo
+     }
      close(sockfd);
      return 1; //Nunca se deberia llegar aca
 }

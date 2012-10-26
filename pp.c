@@ -19,7 +19,7 @@
 /*
  * Variables globales
  */
-	unsigned int mps=1; //Maximo de procesos en el sistema
+	unsigned int mps=10; //Maximo de procesos en el sistema
 	unsigned int mpp=10; //Valor de multiprogramacion
 
 int main(int argc, char *argv[])
