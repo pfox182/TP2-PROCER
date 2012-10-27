@@ -25,7 +25,7 @@ void * LTS_funcion(void * var){
 	char *puerto="4545";
 
 	printf("Soy el hilo de LTS levantando el server.\n");
-	printf("Valores compratidos MPS:%d MPP:%d",mps,mpp);
+	printf("Valores compartidos MPS:%d MPP:%d",mps,mpp);
 	server_socket(puerto);
 
 	return 0;

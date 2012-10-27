@@ -14,11 +14,13 @@
  */
 #include "PP/LTS.h"
 
+
 /*
  * Variables globales
  */
 	unsigned int mps=10; //Maximo de procesos en el sistema
 	unsigned int mpp=10; //Valor de multiprogramacion
+	unsigned int cantidad_hilos_iot=2; //Valor de hilos IOT
 
 // FUNCIONES QUE MANEJAN LOS HILOS DEL PP, luego se puede exportar a archivos STS y PROCER respectivamente.
 
@@ -35,12 +37,14 @@ void *PROCER_funcion (void *var){
 
 int main(int argc, char *argv[])
 {
+   int i;
    pthread_t LTS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t STS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t PROCER_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
 
 
-   //CREACION DE LOS HILOS DEL PP
+   //CREACION DE LOS HILOS DEL PP.
+   //TODO agregar validaciones a los hilos.
 
    printf("Creando hilo de LTS\n");
    pthread_create(&(LTS_hilo), NULL, LTS_funcion, NULL); // Creamos el thread LTS
@@ -50,6 +54,13 @@ int main(int argc, char *argv[])
 
    printf("Creando hilo de PROCER\n");
    pthread_create(&(PROCER_hilo), NULL, PROCER_funcion, NULL); // Creamos el thread PROCER
+
+   //CREACION DE LOS HILOS IOT
+   for (i=0; i < cantidad_hilos_iot; i++){
+	   pthread_t IOT_hilo;
+	   printf("Creando hilo de IOT numero:%d\n", i+1);
+	   pthread_create(&(IOT_hilo), NULL, PROCER_funcion, NULL); // Creamos el thread IOT
+   }
 
    pthread_exit(NULL);// Última función que debe ejecutar el main() siempre
    return 0;
