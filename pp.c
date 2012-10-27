@@ -4,7 +4,8 @@
  *  Created on: 26/10/2012
  *      Author: utnso
  */
-
+#include <unistd.h>
+#include <signal.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stddef.h> //Contiene la constante NULL
@@ -18,9 +19,9 @@
 /*
  * Variables globales
  */
-	unsigned int mps=10; //Maximo de procesos en el sistema
-	unsigned int mpp=10; //Valor de multiprogramacion
-	unsigned int cantidad_hilos_iot=2; //Valor de hilos IOT
+unsigned int mps=10; //Maximo de procesos en el sistema
+unsigned int mpp=10; //Valor de multiprogramacion
+unsigned int cantidad_hilos_iot=2; //Valor de hilos IOT
 
 // FUNCIONES QUE MANEJAN LOS HILOS DEL PP, luego se puede exportar a archivos STS y PROCER respectivamente.
 
@@ -33,6 +34,15 @@ void *PROCER_funcion (void *var){
 	//TODO Funcionalidad PROCER.
 	return 0;
 }
+
+
+void sigusr1_handler (int numeroSenial){
+	//TODO Suspender el proceso PROCER.
+	printf("Capture la senial SIGUSR1");
+	/* Se pone controlador por defecto para SIGUSR1 */
+	signal (SIGUSR1, SIG_DFL);
+}
+
 
 
 int main(int argc, char *argv[])
@@ -61,6 +71,17 @@ int main(int argc, char *argv[])
 	   printf("Creando hilo de IOT numero:%d\n", i+1);
 	   pthread_create(&(IOT_hilo), NULL, PROCER_funcion, NULL); // Creamos el thread IOT
    }
+
+   //CAPTURAR LA SEÑAL SIGUSR1.
+   if (signal(SIGUSR1,sigusr1_handler) == SIG_ERR)
+   {
+	   perror("ERROR No se puede cambiar signal");
+   }
+
+   	/* Bucle infinito de espera.
+   	 * pause() deja el proceso dormido hasta que llegue una señal. */
+    while (1)
+   		pause();
 
    pthread_exit(NULL);// Última función que debe ejecutar el main() siempre
    return 0;
