@@ -13,19 +13,20 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+//Prototipos de funcion
 int server_socket(char *puerto);
 void administrar_coneccion(int);
 void error(const char *msg);
+int notificar_sobrepaso_mps(int);
 
 //Variables globales
-extern unsigned int mps,mpp; //Se usa extern para indicar que son variables globales de otro archivo
+extern unsigned int mps,mpp,max_mps,max_mpp; //Se usa extern para indicar que son variables globales de otro archivo
 
 void * LTS_funcion(void * var){
 
 	char *puerto="4545";
 
 	printf("Soy el hilo de LTS levantando el server.\n");
-	printf("Valores compartidos MPS:%d MPP:%d",mps,mpp);
 	server_socket(puerto);
 
 	return 0;
@@ -41,7 +42,19 @@ void * LTS_funcion(void * var){
  ****************************************/
 int server_socket(char *puerto)
 {
-     int sockfd, newsockfd, portno, pid;
+	//Declaraciones para el select
+		fd_set master;//Conjunto maestro de descriptores de ficheros
+		fd_set read_fds;//Conjunto temporal de descriptores de fichero para select()
+		int fdmax;//Numero maximo de descriptores de fichero
+		int listener;//Descriptor de socket a la escucha
+		int newfd;//Descriptor de nuevo socket a la escucha
+		FD_ZERO(&master);//Borra los conjuntos maestro y temporal
+		FD_ZERO(&read_fds);
+		int i,j;//Contador para for
+		char buf[256];
+		int nbytes;
+
+     int portno;
      socklen_t clilen;
      struct sockaddr_in serv_addr, cli_addr;
 
@@ -49,36 +62,76 @@ int server_socket(char *puerto)
          fprintf(stderr,"ERROR, no port provided\n");
          exit(1);
      }
-     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-     if (sockfd < 0)
+     listener = socket(AF_INET, SOCK_STREAM, 0);
+     if (listener < 0)
         error("ERROR opening socket");
      bzero((char *) &serv_addr, sizeof(serv_addr));
      portno = atoi(puerto);
      serv_addr.sin_family = AF_INET;
      serv_addr.sin_addr.s_addr = INADDR_ANY;
      serv_addr.sin_port = htons(portno);
-     if (bind(sockfd, (struct sockaddr *) &serv_addr,
+     if (bind(listener, (struct sockaddr *) &serv_addr,
               sizeof(serv_addr)) < 0)
               error("ERROR on binding");
-     listen(sockfd,5);
-     clilen = sizeof(cli_addr);
-     while (1) {
-         newsockfd = accept(sockfd,(struct sockaddr *) &cli_addr, &clilen);
-         if (newsockfd < 0)
-             error("ERROR on accept");
-         pid = fork();
-         if (pid < 0)
-             error("ERROR on fork");
-         if (pid == 0)  {
-             close(sockfd);
-             //Proceso hijo
-             administrar_coneccion(newsockfd);
-             exit(0);
-         }
-         else close(newsockfd);
+     if(listen(listener,20) == -1){
+    	 error("Error al escuchar");
      }
-     close(sockfd);
-     return 1; //Nunca se deberia llegar aca
+     //Añadir listener al conjunto maestro
+     FD_SET(listener,&master);
+     //Seguir la pista del descriptor de fichero mayor
+     fdmax = listener;
+
+     while (1) {
+    	 read_fds = master;
+    	 if(select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1){
+    		 error("Error en el select");
+    	 }
+    	 //Explorar conexiones existentes en busca de datos a leer
+    	 for(i=0;i<=fdmax;i++){
+    		 if(FD_ISSET(i,&read_fds)){
+    			 if( i == listener ){
+    				 //Gestionar nuevas conexiones
+    				 clilen = sizeof(cli_addr);
+    				 if((newfd = accept(listener,(struct sockaddr *) &cli_addr, &clilen)) == -1){
+    					 error("Error al aceptar conexion");
+    				 }else{
+    					 FD_SET(newfd,&master);//Añadir al conjunto maestro
+    					 if( newfd > fdmax){//Actualizar el maximo
+    						 	fdmax = newfd;
+    					 }
+    					 printf("Nueva coneccion desde en socket %d\n",newfd);
+    				 }
+    			 }else{
+    				 if ((nbytes = recv(i,buf,sizeof(buf),0)) <= 0){
+    					 //Error o conexion cerrada por el cliente
+    					 if( nbytes == 0){
+    						 //Conexion cerrada
+    						 printf("El socket %d cerro la conexion\n",i);
+    					 }else{
+    						 error("Error al recibir datos");
+    					 }
+    					 close(i);
+    					 FD_CLR(i,&master);//Elimiar del conjunto maestro
+    				 }else{
+    					 //Tenemos datos de algun cliente
+    					 for(j=0;j <= fdmax;j++){
+    						 //Enviar a todo el mundo
+    						 if(FD_ISSET(j,&master)){
+    							 //Exepto al listener y a nosotros mismos
+    							 if( j != listener && j != i){
+    								 if(send(j,buf,nbytes,0) == -1){
+    									error("Error al enviar");
+    								 }
+    							 }
+    						 }
+    					 }
+    				 }
+    			 }
+    		 }
+    	}
+     }
+
+     return 0; //Nunca se deberia llegar aca
 }
 
 
@@ -91,13 +144,36 @@ void administrar_coneccion (int sock)
 {
    int n;
    char buffer[256];
-
+/*
+   if(mps < max_mps){
+	   //TODO:añadir semaforo
+	   mps++;
+   }else{
+	   notificar_sobrepaso_mps(sock);
+	   close(sock);
+	   exit(0);
+   }
+*/
    bzero(buffer,256);
    n = read(sock,buffer,255);
    if (n < 0) error("ERROR reading from socket");
    printf("Here is the message: %s\n",buffer);
    n = write(sock,"I got your message",18);
    if (n < 0) error("ERROR writing to socket");
+}
+
+/******* notificar_sobrepaso_mps() *********************
+Envia un mensaje al PI (proceso interprete), que le informa
+que se sobrepaso el maximo de MPS. Si lo pudo enviar retorna 1.
+ ****************************************/
+int notificar_sobrepaso_mps(int sock){
+	int n;
+	char *msj="mps overflow";
+
+	n = write(sock,msj,strlen(msj));
+	if (n < 0) error("ERROR writing to socket in notificar_sobrepaso_mps(int)");
+
+	return 0;
 }
 
 /******* error() *********************
