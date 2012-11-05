@@ -58,24 +58,33 @@ int server_socket(char *puerto)
      socklen_t clilen;
      struct sockaddr_in serv_addr, cli_addr;
 
-     if (puerto == NULL) { //TODO: agregar mas validaciones
+     if (puerto == NULL) {
          fprintf(stderr,"ERROR, no port provided\n");
          exit(1);
      }
-     listener = socket(AF_INET, SOCK_STREAM, 0);
-     if (listener < 0)
+
+     listener = socket(AF_INET, SOCK_STREAM, 0);//Obtenemos el descriptor de fichero para el socket
+     if (listener < 0){
         error("ERROR opening socket");
+     }
+
      bzero((char *) &serv_addr, sizeof(serv_addr));
-     portno = atoi(puerto);
+     portno = atoi(puerto);//Transformamos el char* a int
+
+     //Creamos la estructura serv_addr
      serv_addr.sin_family = AF_INET;
-     serv_addr.sin_addr.s_addr = INADDR_ANY;
-     serv_addr.sin_port = htons(portno);
-     if (bind(listener, (struct sockaddr *) &serv_addr,
-              sizeof(serv_addr)) < 0)
-              error("ERROR on binding");
+     serv_addr.sin_addr.s_addr = INADDR_ANY;//INADDR_ANY indica la direccion ip de esta pc ( debe ir en network byte order )
+     serv_addr.sin_port = htons(portno);//hton() -> convierte de Host byte order -> Network byte order )
+     memset(&(serv_addr.sin_zero),'\0',8);
+
+     if (bind(listener, (struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0){//Enlazamos el descriptor con la ip y puerto
+    	 error("ERROR on binding");
+     }
+
      if(listen(listener,20) == -1){
     	 error("Error al escuchar");
      }
+
      //Añadir listener al conjunto maestro
      FD_SET(listener,&master);
      //Seguir la pista del descriptor de fichero mayor
@@ -86,6 +95,7 @@ int server_socket(char *puerto)
     	 if(select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1){
     		 error("Error en el select");
     	 }
+
     	 //Explorar conexiones existentes en busca de datos a leer
     	 for(i=0;i<=fdmax;i++){
     		 if(FD_ISSET(i,&read_fds)){
@@ -115,7 +125,7 @@ int server_socket(char *puerto)
     				 }else{
     					 //Tenemos datos de algun cliente
     					 for(j=0;j <= fdmax;j++){
-    						 //Enviar a todo el mundo
+    						 //Enviar a todos el mundo
     						 if(FD_ISSET(j,&master)){
     							 //Exepto al listener y a nosotros mismos
     							 if( j != listener && j != i){
