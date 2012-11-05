@@ -57,6 +57,7 @@ int server_socket(char *puerto)
      int portno;
      socklen_t clilen;
      struct sockaddr_in serv_addr, cli_addr;
+     int yes=1;
 
      if (puerto == NULL) {
          fprintf(stderr,"ERROR, no port provided\n");
@@ -66,6 +67,11 @@ int server_socket(char *puerto)
      listener = socket(AF_INET, SOCK_STREAM, 0);//Obtenemos el descriptor de fichero para el socket
      if (listener < 0){
         error("ERROR opening socket");
+     }
+
+     //Oviamos el mensaje "Address alredy in use"
+     if( setsockopt(listener,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(int)) == -1){
+    	 error("ERROR on setsockopt");
      }
 
      bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -128,8 +134,9 @@ int server_socket(char *puerto)
     						 //Enviar a todos el mundo
     						 if(FD_ISSET(j,&master)){
     							 //Exepto al listener y a nosotros mismos
-    							 if( j != listener && j != i){
-    								 if(send(j,buf,nbytes,0) == -1){
+    							 if( j == i ){//Solo envio mensajes al que me hablo
+    								 char *msj="Recivi el mensaje";
+    								 if(send(j,msj,nbytes,19) == -1){
     									error("Error al enviar");
     								 }
     							 }
