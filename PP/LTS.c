@@ -13,11 +13,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#define BUFFER_SIZE 1024
+
 //Prototipos de funcion
 int server_socket(char *puerto);
-void administrar_coneccion(int);
+int recvall(int client_fd,char *buffer,int *header,int flag);
 void error(const char *msg);
-int notificar_sobrepaso_mps(int);
 
 //Variables globales
 extern unsigned int mps,mpp,max_mps,max_mpp; //Se usa extern para indicar que son variables globales de otro archivo
@@ -50,10 +51,11 @@ int server_socket(char *puerto)
 		int newfd;//Descriptor de nuevo socket a la escucha
 		FD_ZERO(&master);//Borra los conjuntos maestro y temporal
 		FD_ZERO(&read_fds);
-		int i,j;//Contador para for
-		char buf[256];
+		int i;//Representan descriptores en un for
+		char *buffer=(char *)malloc(BUFFER_SIZE);
 		int nbytes;
 
+	 int header;
      int portno;
      socklen_t clilen;
      struct sockaddr_in serv_addr, cli_addr;
@@ -118,6 +120,54 @@ int server_socket(char *puerto)
     					 printf("Nueva coneccion desde en socket %d\n",newfd);
     				 }
     			 }else{
+
+    				 //Se establecio la coneccion con un proceso PI
+
+    				 //Validamos las variables mps y mpp
+    				 	 //TODO:implementar validacion
+
+    				 //Recibimos el header del PI
+    				 if( (nbytes = recv(i,&header,sizeof(header),0)) <= 0){
+    					 //Error o conexion cerrada por el cliente
+						 if( nbytes == 0){
+							 //Conexion cerrada
+							 printf("El socket %d cerro la conexion\n",i);
+						 }else{
+							 error("Error al recibir datos del header");
+						 }
+						 close(i);
+						 FD_CLR(i,&master);//Elimiar del conjunto maestro
+    				 }
+
+    				 printf("El header recibido es: %d \n",header);
+
+    				 if ((nbytes = recvall(i,buffer,&header,0)) <= 0){
+						 //Error o conexion cerrada por el cliente
+						 if( nbytes == 0){
+							 //Conexion cerrada
+							 printf("El socket %d cerro la conexion\n",i);
+						 }else{
+							 error("Error al recibir datos del archivo");
+						 }
+
+						 printf("Se recibio:\n %s",buffer);
+
+						 //Enviar confirmacion de que se recibio algo
+						 char *msj="Recivi el mensaje";
+						 if( (nbytes=send(i,msj,nbytes,19)) <= 0){
+							 if(nbytes == 0){
+								 printf("El cliente %i cerro la conexion y no se envio msj de confirmacion.\n",i);
+							 }else{
+								 error("Error al enviar confirmacion");
+							 }
+						 }
+
+						 printf("Mensaje de confirmacion enviado");
+
+						 close(i);
+						 FD_CLR(i,&master);//Elimiar del conjunto maestro
+					 }
+    				 /*
     				 if ((nbytes = recv(i,buf,sizeof(buf),0)) <= 0){
     					 //Error o conexion cerrada por el cliente
     					 if( nbytes == 0){
@@ -143,6 +193,7 @@ int server_socket(char *puerto)
     						 }
     					 }
     				 }
+    				 */
     			 }
     		 }
     	}
@@ -151,48 +202,30 @@ int server_socket(char *puerto)
      return 0; //Nunca se deberia llegar aca
 }
 
+int recvall(int client_fd,char *buffer,int *header,int flag){
 
-/******* administrar_coneccion() *********************
- Hay un instancia de esta funcion por cada coneccion
- establecida. Maneja las comunicaciones con cada coneccion
- de un cliente.
- ****************************************/
-void administrar_coneccion (int sock)
-{
-   int n;
-   char buffer[256];
-/*
-   if(mps < max_mps){
-	   //TODO:añadir semaforo
-	   mps++;
-   }else{
-	   notificar_sobrepaso_mps(sock);
-	   close(sock);
-	   exit(0);
-   }
-*/
-   bzero(buffer,256);
-   n = read(sock,buffer,255);
-   if (n < 0) error("ERROR reading from socket");
-   printf("Here is the message: %s\n",buffer);
-   n = write(sock,"I got your message",18);
-   if (n < 0) error("ERROR writing to socket");
-}
+	int total=0;//Los bytes que recibimos hasta ahora
+	int bytes_left=*header;//Los bytes que faltan recibir
+	int nbytes = 0;
 
-/******* notificar_sobrepaso_mps() *********************
-Envia un mensaje al PI (proceso interprete), que le informa
-que se sobrepaso el maximo de MPS. Si lo pudo enviar retorna 1.
- ****************************************/
-int notificar_sobrepaso_mps(int sock){
-	int n;
-	char *msj="mps overflow";
+	//Valido que halla suficiente espacio
+	if( sizeof(buffer) < bytes_left){
+		free(buffer);
+		buffer=(char *)malloc(bytes_left+1);
+	}
 
-	n = write(sock,msj,strlen(msj));
-	if (n < 0) error("ERROR writing to socket in notificar_sobrepaso_mps(int)");
+	while( total < *header){
+		nbytes = recv(client_fd,buffer+total, bytes_left,flag);
+		if( nbytes == -1){break;}
+		total =+ nbytes;
+		bytes_left =- nbytes;
+	}
 
+	*header = total;//Cantidad de paquetes recibidos en realidad
+
+	return nbytes==-1?-1:0;
 	return 0;
 }
-
 /******* error() *********************
 Imprime el stacktrace ante un error
  ****************************************/
@@ -201,3 +234,5 @@ void error(const char *msg)
     perror(msg);
     exit(1);
 }
+
+
