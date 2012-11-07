@@ -13,15 +13,25 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include "../Estructuras/proceso.h"
+
 #define BUFFER_SIZE 1024
 
 //Prototipos de funcion
 int server_socket(char *puerto);
 int recvall(int client_fd,char *buffer,int *header,int flag);
+proceso crear_proceso(char *buffer);
+data* cargar_datos(char *buffer);
 void error(const char *msg);
+stack* sacar_funciones(char *buffer);
+int notifica_sobrepaso_mps(int cliente_sock);
+int notificar_demora_mpp(int cliente_sock);
+int encolar_solicitud(int cliente_sock);
+int agregar_proceso_a_lista_nuevos(proceso proceso);
 
 //Variables globales
 extern unsigned int mps,mpp,max_mps,max_mpp; //Se usa extern para indicar que son variables globales de otro archivo
+extern unsigned int pid;
 
 void * LTS_funcion(void * var){
 
@@ -51,7 +61,7 @@ int server_socket(char *puerto)
 		int newfd;//Descriptor de nuevo socket a la escucha
 		FD_ZERO(&master);//Borra los conjuntos maestro y temporal
 		FD_ZERO(&read_fds);
-		int i;//Representan descriptores en un for
+		int cliente_sock;//Representan descriptores en un for
 		char *buffer=(char *)malloc(BUFFER_SIZE);
 		int nbytes;
 
@@ -60,6 +70,7 @@ int server_socket(char *puerto)
      socklen_t clilen;
      struct sockaddr_in serv_addr, cli_addr;
      int yes=1;
+     proceso proceso;
 
      if (puerto == NULL) {
          fprintf(stderr,"ERROR, no port provided\n");
@@ -105,9 +116,9 @@ int server_socket(char *puerto)
     	 }
 
     	 //Explorar conexiones existentes en busca de datos a leer
-    	 for(i=0;i<=fdmax;i++){
-    		 if(FD_ISSET(i,&read_fds)){
-    			 if( i == listener ){
+    	 for(cliente_sock=0;cliente_sock<=fdmax;cliente_sock++){
+    		 if(FD_ISSET(cliente_sock,&read_fds)){
+    			 if( cliente_sock == listener ){
     				 //Gestionar nuevas conexiones
     				 clilen = sizeof(cli_addr);
     				 if((newfd = accept(listener,(struct sockaddr *) &cli_addr, &clilen)) == -1){
@@ -123,77 +134,75 @@ int server_socket(char *puerto)
 
     				 //Se establecio la coneccion con un proceso PI
 
+    				 //TODO:¿Fijarse si se reanudo algun proceso?
+
+    				 //TODO:Antes de crear un nuevo proceso hay que fijarce que no halla otra coneccion demorada
+
     				 //Validamos las variables mps y mpp
     				 	 //TODO:implementar validacion
+    				 if( mps < max_mps && mpp < max_mpp){
 
-    				 //Recibimos el header del PI
-    				 if( (nbytes = recv(i,&header,sizeof(header),0)) <= 0){
-    					 //Error o conexion cerrada por el cliente
-						 if( nbytes == 0){
-							 //Conexion cerrada
-							 printf("El socket %d cerro la conexion\n",i);
-						 }else{
-							 error("Error al recibir datos del header");
-						 }
-						 close(i);
-						 FD_CLR(i,&master);//Elimiar del conjunto maestro
-    				 }
-
-    				 printf("El header recibido es: %d \n",header);
-
-    				 if ((nbytes = recvall(i,buffer,&header,0)) <= 0){
-						 //Error o conexion cerrada por el cliente
-						 if( nbytes == 0){
-							 //Conexion cerrada
-							 printf("El socket %d cerro la conexion\n",i);
-						 }else{
-							 error("Error al recibir datos del archivo");
-						 }
-
-						 printf("Se recibio:\n %s",buffer);
-
-						 //Enviar confirmacion de que se recibio algo
-						 char *msj="Recivi el mensaje";
-						 if( (nbytes=send(i,msj,nbytes,19)) <= 0){
-							 if(nbytes == 0){
-								 printf("El cliente %i cerro la conexion y no se envio msj de confirmacion.\n",i);
+						 //Recibimos el header del PI
+						 if( (nbytes = recv(cliente_sock,&header,sizeof(header),0)) <= 0){
+							 //Error o conexion cerrada por el cliente
+							 if( nbytes == 0){
+								 //Conexion cerrada
+								 printf("El socket %d cerro la conexion\n",cliente_sock);
 							 }else{
-								 error("Error al enviar confirmacion");
+								 error("Error al recibir datos del header");
 							 }
+							 close(cliente_sock);
+							 FD_CLR(cliente_sock,&master);//Elimiar del conjunto maestro
 						 }
 
-						 printf("Mensaje de confirmacion enviado");
+						 printf("El header recibido es: %d \n",header);
 
-						 close(i);
-						 FD_CLR(i,&master);//Elimiar del conjunto maestro
-					 }
-    				 /*
-    				 if ((nbytes = recv(i,buf,sizeof(buf),0)) <= 0){
-    					 //Error o conexion cerrada por el cliente
-    					 if( nbytes == 0){
-    						 //Conexion cerrada
-    						 printf("El socket %d cerro la conexion\n",i);
-    					 }else{
-    						 error("Error al recibir datos");
-    					 }
-    					 close(i);
-    					 FD_CLR(i,&master);//Elimiar del conjunto maestro
+						 if ((nbytes = recvall(cliente_sock,buffer,&header,0)) <= 0){
+							 //Error o conexion cerrada por el cliente
+							 if( nbytes == 0){
+								 //Conexion cerrada
+								 printf("El socket %d cerro la conexion\n",cliente_sock);
+							 }else{
+								 error("Error al recibir datos del archivo");
+							 }
+
+							 printf("Se recibio:\n %s",buffer);
+
+							 //Enviar confirmacion de que se recibio algo
+							 char *msj="Recivi el mensaje";
+							 if( (nbytes=send(cliente_sock,msj,nbytes,19)) <= 0){
+								 if(nbytes == 0){
+									 printf("El cliente %i cerro la conexion y no se envio msj de confirmacion.\n",cliente_sock);
+								 }else{
+									 error("Error al enviar confirmacion");
+								 }
+							 }
+
+							 printf("Mensaje de confirmacion enviado");
+
+							 //Creamos el proceso
+							 proceso = crear_proceso(buffer);
+
+							 //TODO: IMPLEMENTAR SEMAFOROS PARA LA LISTA DE NUEVOS
+							 agregar_proceso_a_lista_nuevos(proceso);
+
+							 //TODO: IMPLEMENTAR SEMAFOROS
+							 mps++;
+							 mpp++;
+
+							 close(cliente_sock);
+							 FD_CLR(cliente_sock,&master);//Elimiar del conjunto maestro
+						 }
     				 }else{
-    					 //Tenemos datos de algun cliente
-    					 for(j=0;j <= fdmax;j++){
-    						 //Enviar a todos el mundo
-    						 if(FD_ISSET(j,&master)){
-    							 //Exepto al listener y a nosotros mismos
-    							 if( j == i ){//Solo envio mensajes al que me hablo
-    								 char *msj="Recivi el mensaje";
-    								 if(send(j,msj,nbytes,19) == -1){
-    									error("Error al enviar");
-    								 }
-    							 }
-    						 }
-    					 }
+    					if( mps >= max_mps){
+    						notifica_sobrepaso_mps(cliente_sock);
+    						close(cliente_sock);
+    					}else{
+    						notificar_demora_mpp(cliente_sock);
+    						encolar_solicitud(cliente_sock);
+    					}
+    					
     				 }
-    				 */
     			 }
     		 }
     	}
@@ -224,6 +233,122 @@ int recvall(int client_fd,char *buffer,int *header,int flag){
 	*header = total;//Cantidad de paquetes recibidos en realidad
 
 	return nbytes==-1?-1:0;
+	return 0;
+}
+
+proceso crear_proceso(char *buffer){
+	proceso proceso;
+	pcb pcb;
+
+	//TODO:IMPLEMENTAR SEMAFOROS
+	pcb.pid = ++pid;
+	pcb.pc = 0;
+
+	pcb.codigo = (char *)malloc(sizeof(buffer));
+	memcpy(pcb.codigo,buffer,sizeof(buffer));
+
+	pcb.datos = cargar_datos(buffer);
+	pcb.pila = sacar_funciones(buffer);
+
+	free(buffer);
+
+	proceso.pcb = pcb;
+	proceso.prioridad = 0;
+	return proceso;
+}
+
+data* cargar_datos(char *buffer){
+	//Declaro variables
+
+	data *puntero;
+	data datos[26];
+	int i;
+	char j;
+	char *separacion;
+	int flag;
+	char *resto=buffer;
+	char *linea;
+
+	//Inicializo el vector de variables
+
+	for (i = 0,j='a'; i < 26; i++,j++)
+	{
+		datos[i].variable = j;
+		datos[i].valor = -1;
+	}
+
+	while( resto != NULL){
+		linea = strtok(resto,"\n");
+		resto = strtok(NULL,"\0");
+
+		if( strstr(linea,"variable") != NULL){
+			//Lee la cadena y cargo en vector las variables existentes.
+			separacion = strtok(linea," ");
+			separacion = strtok(NULL,",");
+			while( separacion != NULL )
+			{
+				//busco posicion de la variable en el vector
+				i=0;
+				flag=1;
+				while(flag != 0)
+				{
+					if ( datos[i].variable == *separacion ){
+						flag = 0;
+					}
+					else{
+						i++;
+					}
+				}
+				datos[i].valor = 0;
+				separacion = strtok(NULL,",");
+			}
+		}
+	}
+
+	puntero = &datos[0];
+
+
+
+
+	//Muestro vector
+	for (i = 0; i < 26 ; i++)
+	{
+		printf("El valor de datos[%d] es var:%c valor:%d,\n",i,datos[i].variable,datos[i].valor);
+	}
+
+	return puntero;
+}
+
+stack* sacar_funciones(char *buffer){
+	int cantidad_de_funciones = 10;
+	stack* pila = (stack *)malloc(sizeof(stack));
+	/*
+	 * while(funciones en buffer){
+	 * 	pila = (stack *)realloc(sizeof(stack));
+	 * 	pila.funcion = funcion;
+	 * 	pila.linea = linea;
+	 * }
+	 */
+	//TODO:IMPLEMENTAR
+	return pila;
+}
+
+int agregar_proceso_a_lista_nuevos(proceso proceso){
+	return 0;
+}
+
+int notifica_sobrepaso_mps(int cliente_sock){
+	//TODO:IMPLEMENTAR
+	return 0;
+}
+
+int notificar_demora_mpp(int cliente_sock){
+	//TODO:IMPLEMENTAR
+	return 0;
+}
+
+int encolar_solicitud(int cliente_sock){
+	//TODO:IMPLEMENTAR
 	return 0;
 }
 /******* error() *********************

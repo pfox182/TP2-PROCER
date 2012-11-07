@@ -8,10 +8,11 @@
 #ifndef PROCESO_H_
 #define PROCESO_H_
 
+#define CANT_LETRAS 26
+
 struct data{
-	char *variable;
+	char variable;
 	int valor;
-	struct data *siguiente;
 } typedef data;
 
 struct stack{
@@ -20,16 +21,16 @@ struct stack{
 	struct stack *siguiente;
 } typedef stack;
 
-struct code{
-	char *codigo;
-}typedef code;
-
 struct pcb{
 	unsigned int pid;//Process ID
 	unsigned int pc;//Program counter
 	data *datos;
 	stack *pila;
-	code codigo;
+	char *codigo;
 }typedef pcb;
 
+struct proceso{
+	pcb pcb;
+	int prioridad;
+}typedef proceso;
 #endif /* PROCESO_H_ */
