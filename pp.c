@@ -19,9 +19,12 @@
 /*
  * Variables globales
  */
-unsigned int mps=10; //Maximo de procesos en el sistema
-unsigned int mpp=10; //Valor de multiprogramacion
+unsigned int mps=5; //Procesos en el sistema
+unsigned int mpp=5; //Valor de multiprogramacion
+unsigned int max_mps=10; //Maximo de procesos en el sistema
+unsigned int max_mpp=10; //Maximo valor de multiprogramacion
 unsigned int cantidad_hilos_iot=2; //Valor de hilos IOT
+unsigned int pid=0;
 
 // FUNCIONES QUE MANEJAN LOS HILOS DEL PP, luego se puede exportar a archivos STS y PROCER respectivamente.
 
