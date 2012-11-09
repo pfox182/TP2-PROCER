@@ -64,15 +64,11 @@ int server_socket(char *puerto)
 		FD_ZERO(&read_fds);
 		int cliente_sock;//Representan descriptores en un for
 		char *buffer=(char *)malloc(BUFFER_SIZE);
-		//int nbytes;
-
-	 //int header;
 
      int portno;
      socklen_t clilen;
      struct sockaddr_in serv_addr, cli_addr;
      int yes=1;
-     //proceso proceso;
 
      if (puerto == NULL) {
          fprintf(stderr,"ERROR, no port provided\n");
@@ -143,8 +139,15 @@ int server_socket(char *puerto)
      return 0; //Nunca se deberia llegar aca
 }
 
+/******* administrar_conexion() *********************
+ Realiza todos los procesos de validacion de mpp y mps, llama
+ a lo procedimintos para crear el proceso y realiza las
+ encolaciones necesarias.
+ ****************************************/
 int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
 	int header,nbytes;
+	proceso proceso;
+
 	//TODO:¿Fijarse si se reanudo algun proceso?
 
 	//TODO:Antes de crear un nuevo proceso hay que fijarce que no halla otra coneccion demorada
@@ -197,10 +200,18 @@ int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
 			 }
 		 }
 
-		 printf("Mensaje de confirmacion enviado");
-
 		 //Creamos el proceso
-		 //proceso = crear_proceso(buffer);
+
+		 proceso = crear_proceso(buffer);
+		 printf("El proceso creado fue:\n");
+		 	printf("\tPID:%d\n",proceso.pcb.pid);
+		 	printf("\tPC:%d\n",proceso.pcb.pc);
+		 	printf("\tDatos:\n");
+		 	int i;
+		 	for( i=0;i<26;i++){
+		 		printf("\t variable: %c valor:%d\n",proceso.pcb.datos[i].variable,proceso.pcb.datos[i].valor);
+		 	}
+		 printf("\tPrioridad:%d\n",proceso.prioridad);
 
 		 //TODO: IMPLEMENTAR SEMAFOROS PARA LA LISTA DE NUEVOS
 		 //agregar_proceso_a_lista_nuevos(proceso);
@@ -215,6 +226,10 @@ int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
 
 	 return 0;
 }
+
+/******* recvall() *********************
+Se encarga de recibir una cantidad de bytes dados(header).
+ ****************************************/
 int recvall(int client_fd,char *buffer,int *header,int flag){
 
 	int total=0;//Los bytes que recibimos hasta ahora
@@ -240,6 +255,7 @@ int recvall(int client_fd,char *buffer,int *header,int flag){
 	return 0;
 }
 
+
 proceso crear_proceso(char *buffer){
 	proceso proceso;
 	pcb pcb;
@@ -252,7 +268,8 @@ proceso crear_proceso(char *buffer){
 	memcpy(pcb.codigo,buffer,sizeof(buffer));
 
 	pcb.datos = cargar_datos(buffer);
-	pcb.pila = sacar_funciones(buffer);
+	pcb.pila=NULL;//pcb.pila = sacar_funciones(buffer);
+
 
 	free(buffer);
 
@@ -265,7 +282,7 @@ data* cargar_datos(char *buffer){
 	//Declaro variables
 
 	data *puntero;
-	data datos[26];
+	data *datos=(data *)malloc(sizeof(data)*26);//Antes data datos[26];
 	int i;
 	char j;
 	char *separacion;
@@ -315,10 +332,12 @@ data* cargar_datos(char *buffer){
 
 
 	//Muestro vector
+	/*
 	for (i = 0; i < 26 ; i++)
 	{
 		printf("El valor de datos[%d] es var:%c valor:%d,\n",i,datos[i].variable,datos[i].valor);
 	}
+	*/
 
 	return puntero;
 }
