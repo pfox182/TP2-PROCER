@@ -14,6 +14,7 @@
 #include <netinet/in.h>
 
 #include "../Estructuras/proceso.h"
+#include "../Estructuras/colaConeccionesDemoradas.h"
 
 #define BUFFER_SIZE 1024
 
@@ -26,7 +27,6 @@ void error(const char *msg);
 stack* sacar_funciones(char *buffer);
 int notifica_sobrepaso_mps(int cliente_sock);
 int notificar_demora_mpp(int cliente_sock);
-int encolar_solicitud(int cliente_sock);
 int agregar_proceso_a_lista_nuevos(proceso proceso);
 int administrar_conexion(int cliente_sock,fd_set *master,char *buffer);
 
@@ -87,7 +87,7 @@ int server_socket(char *puerto)
 
      bzero((char *) &serv_addr, sizeof(serv_addr));
      portno = atoi(puerto);//Transformamos el char* a int
-
+#include "../Estructuras/proceso.h"
      //Creamos la estructura serv_addr
      serv_addr.sin_family = AF_INET;
      serv_addr.sin_addr.s_addr = INADDR_ANY;//INADDR_ANY indica la direccion ip de esta pc ( debe ir en network byte order )
@@ -147,6 +147,7 @@ int server_socket(char *puerto)
 int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
 	int header,nbytes;
 	proceso proceso;
+	coneccionesDemoradas *coneccionesDemoradas;
 
 	//TODO:¿Fijarse si se reanudo algun proceso?
 
@@ -160,7 +161,7 @@ int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
 			close(cliente_sock);
 		}else{
 			//notificar_demora_mpp(cliente_sock);
-			//encolar_solicitud(cliente_sock);
+			encolar_solicitud(cliente_sock, coneccionesDemoradas);
 		}
 	}
 
@@ -370,10 +371,6 @@ int notificar_demora_mpp(int cliente_sock){
 	return 0;
 }
 
-int encolar_solicitud(int cliente_sock){
-	//TODO:IMPLEMENTAR
-	return 0;
-}
 /******* error() *********************
 Imprime el stacktrace ante un error
  ****************************************/
