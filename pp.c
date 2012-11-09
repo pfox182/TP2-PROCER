@@ -8,13 +8,18 @@
 #include <signal.h>
 #include <pthread.h>
 #include <stdio.h>
-#include <stddef.h> //Contiene la constante NULL
+#include <stdlib.h>
+#include <string.h>
 
 /*
  * Headers propios
  */
 #include "PP/LTS.h"
-
+#include "FuncionesPropias/manejo_archivos.h"
+/*
+ * Prototipos
+ */
+int cargar_archivo_configuracion();
 
 /*
  * Variables globales
@@ -55,7 +60,9 @@ int main(int argc, char *argv[])
    pthread_t STS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t PROCER_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
 
-
+   cargar_archivo_configuracion();
+   printf("mps=%d\n",mps);
+   printf("mpp=%d\n",mpp);
    //CREACION DE LOS HILOS DEL PP.
    //TODO agregar validaciones a los hilos.
 
@@ -89,4 +96,35 @@ int main(int argc, char *argv[])
    pthread_exit(NULL);// Última función que debe ejecutar el main() siempre
    return 0;
 }
+
+int cargar_archivo_configuracion(){
+	char *nombre_archivo="pp.conf";
+	char *texto_del_archivo = leer_archivo(nombre_archivo);
+	char *linea;
+	char *valor;
+
+	while( texto_del_archivo != NULL){
+		linea = strtok(texto_del_archivo,"\n");
+		texto_del_archivo = strtok(NULL,"\0");
+
+		if( strstr(linea,"mps")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				mps=atoi(valor);
+			}
+		}
+		if( strstr(linea,"mpp")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				mpp=atoi(valor);
+			}
+		}
+	}
+
+	return 0;
+}
+
+
 
