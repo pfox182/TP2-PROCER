@@ -28,6 +28,7 @@ int notifica_sobrepaso_mps(int cliente_sock);
 int notificar_demora_mpp(int cliente_sock);
 int encolar_solicitud(int cliente_sock);
 int agregar_proceso_a_lista_nuevos(proceso proceso);
+int administrar_conexion(int cliente_sock,fd_set *master,char *buffer);
 
 //Variables globales
 extern unsigned int mps,mpp,max_mps,max_mpp; //Se usa extern para indicar que son variables globales de otro archivo
@@ -63,9 +64,10 @@ int server_socket(char *puerto)
 		FD_ZERO(&read_fds);
 		int cliente_sock;//Representan descriptores en un for
 		char *buffer=(char *)malloc(BUFFER_SIZE);
-		int nbytes;
+		//int nbytes;
 
-	 int header;
+	 //int header;
+
      int portno;
      socklen_t clilen;
      struct sockaddr_in serv_addr, cli_addr;
@@ -131,77 +133,8 @@ int server_socket(char *puerto)
 					  printf("Nueva coneccion desde en socket %d\n",newfd);
 				  }
     	      }else{
-
     				 //Se establecio la coneccion con un proceso PI
-
-    				 //TODO:¿Fijarse si se reanudo algun proceso?
-
-    				 //TODO:Antes de crear un nuevo proceso hay que fijarce que no halla otra coneccion demorada
-
-    				 //Validamos las variables mps y mpp
-    				 	 //TODO:implementar validacion
-    	    	  	if( mps >= max_mps || mpp >= max_mpp){//Si no entra al if => todo. ok
-						if( mps >= max_mps){
-							//notifica_sobrepaso_mps(cliente_sock);
-							close(cliente_sock);
-						}else{
-							//notificar_demora_mpp(cliente_sock);
-							//encolar_solicitud(cliente_sock);
-						}
-    	    	  	}
-
-					 //Recibimos el header del PI
-					 if( (nbytes = recv(cliente_sock,&header,sizeof(header),0)) <= 0){
-						 //Error o conexion cerrada por el cliente
-						 if( nbytes == 0){
-							 //Conexion cerrada
-							 printf("El socket %d cerro la conexion\n",cliente_sock);
-						 }else{
-							 error("Error al recibir datos del header");
-						 }
-						 close(cliente_sock);
-						 FD_CLR(cliente_sock,&master);//Elimiar del conjunto maestro
-					 }
-
-					 printf("El header recibido es: %d \n",header);
-
-					 if ((nbytes = recvall(cliente_sock,buffer,&header,0)) <= 0){
-						 //Error o conexion cerrada por el cliente
-						 if( nbytes == 0){
-							 //Conexion cerrada
-							 printf("El socket %d cerro la conexion\n",cliente_sock);
-						 }else{
-							 error("Error al recibir datos del archivo");
-						 }
-
-						 printf("Se recibio:\n %s",buffer);
-
-						 //Enviar confirmacion de que se recibio algo
-						 char *msj="Recivi el mensaje";
-						 if( (nbytes=send(cliente_sock,msj,nbytes,19)) <= 0){
-							 if(nbytes == 0){
-								 printf("El cliente %i cerro la conexion y no se envio msj de confirmacion.\n",cliente_sock);
-							 }else{
-								 error("Error al enviar confirmacion");
-							 }
-						 }
-
-						 printf("Mensaje de confirmacion enviado");
-
-						 //Creamos el proceso
-						 //proceso = crear_proceso(buffer);
-
-						 //TODO: IMPLEMENTAR SEMAFOROS PARA LA LISTA DE NUEVOS
-						 //agregar_proceso_a_lista_nuevos(proceso);
-
-						 //TODO: IMPLEMENTAR SEMAFOROS
-						 mps++;
-						 mpp++;
-
-						 close(cliente_sock);
-						 FD_CLR(cliente_sock,&master);//Elimiar del conjunto maestro
-					 }
-
+    	    	  	 administrar_conexion(cliente_sock,&master,buffer);
     			 }
     		 }
     	}
@@ -210,6 +143,78 @@ int server_socket(char *puerto)
      return 0; //Nunca se deberia llegar aca
 }
 
+int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
+	int header,nbytes;
+	//TODO:¿Fijarse si se reanudo algun proceso?
+
+	//TODO:Antes de crear un nuevo proceso hay que fijarce que no halla otra coneccion demorada
+
+	//Validamos las variables mps y mpp
+		 //TODO:implementar validacion
+	if( mps >= max_mps || mpp >= max_mpp){//Si no entra al if => todo. ok
+		if( mps >= max_mps){
+			//notifica_sobrepaso_mps(cliente_sock);
+			close(cliente_sock);
+		}else{
+			//notificar_demora_mpp(cliente_sock);
+			//encolar_solicitud(cliente_sock);
+		}
+	}
+
+	 //Recibimos el header del PI
+	 if( (nbytes = recv(cliente_sock,&header,sizeof(header),0)) <= 0){
+		 //Error o conexion cerrada por el cliente
+		 if( nbytes == 0){
+			 //Conexion cerrada
+			 printf("El socket %d cerro la conexion\n",cliente_sock);
+		 }else{
+			 error("Error al recibir datos del header");
+		 }
+		 close(cliente_sock);
+		 FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
+	 }
+
+	 printf("El header recibido es: %d \n",header);
+
+	 if ((nbytes = recvall(cliente_sock,buffer,&header,0)) <= 0){
+		 //Error o conexion cerrada por el cliente
+		 if( nbytes == 0){
+			 //Conexion cerrada
+			 printf("El socket %d cerro la conexion\n",cliente_sock);
+		 }else{
+			 error("Error al recibir datos del archivo");
+		 }
+
+		 printf("Se recibio:\n %s",buffer);
+
+		 //Enviar confirmacion de que se recibio algo
+		 char *msj="Recivi el mensaje";
+		 if( (nbytes=send(cliente_sock,msj,nbytes,19)) <= 0){
+			 if(nbytes == 0){
+				 printf("El cliente %i cerro la conexion y no se envio msj de confirmacion.\n",cliente_sock);
+			 }else{
+				 error("Error al enviar confirmacion");
+			 }
+		 }
+
+		 printf("Mensaje de confirmacion enviado");
+
+		 //Creamos el proceso
+		 //proceso = crear_proceso(buffer);
+
+		 //TODO: IMPLEMENTAR SEMAFOROS PARA LA LISTA DE NUEVOS
+		 //agregar_proceso_a_lista_nuevos(proceso);
+
+		 //TODO: IMPLEMENTAR SEMAFOROS
+		 mps++;
+		 mpp++;
+
+		 close(cliente_sock);
+		 FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
+	 }
+
+	 return 0;
+}
 int recvall(int client_fd,char *buffer,int *header,int flag){
 
 	int total=0;//Los bytes que recibimos hasta ahora
