@@ -15,6 +15,7 @@
 
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/colaConeccionesDemoradas.h"
+#include "../Estructuras/manejo_listas_funciones.h"
 
 #define BUFFER_SIZE 1024
 
@@ -269,7 +270,7 @@ proceso crear_proceso(char *buffer){
 	memcpy(pcb.codigo,buffer,sizeof(buffer));
 
 	pcb.datos = cargar_datos(buffer);
-	pcb.pila=NULL;//pcb.pila = sacar_funciones(buffer);
+	pcb.pila= sacar_funciones(buffer);
 
 
 	free(buffer);
@@ -344,17 +345,27 @@ data* cargar_datos(char *buffer){
 }
 
 stack* sacar_funciones(char *buffer){
-	//int cantidad_de_funciones = 10;
-	stack* pila = (stack *)malloc(sizeof(stack));
-	/*
-	 * while(funciones en buffer){
-	 * 	pila = (stack *)realloc(sizeof(stack));
-	 * 	pila.funcion = funcion;
-	 * 	pila.linea = linea;
-	 * }
-	 */
-	//TODO:IMPLEMENTAR
-	return pila;
+	int numero_linea;
+	char *funcion;
+	char *resto=buffer;
+	char *linea;
+	stack *lista_funciones;
+
+	numero_linea = 0;
+
+	while( resto != NULL){
+
+		linea = strtok(resto,"\n");
+		resto = strtok(NULL,"\0");
+		numero_linea++;
+
+		if( strstr(linea,"()") != NULL){
+			funcion = strtok(linea,"()");
+			agregar_funcion(lista_funciones,funcion,numero_linea);
+		}
+
+	}
+	return lista_funciones;
 }
 
 int agregar_proceso_a_lista_nuevos(proceso proceso){
