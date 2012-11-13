@@ -30,6 +30,9 @@ unsigned int max_mps=10; //Maximo de procesos en el sistema
 unsigned int max_mpp=10; //Maximo valor de multiprogramacion
 unsigned int cantidad_hilos_iot=2; //Valor de hilos IOT
 unsigned int pid=0;
+char *lpl="FIFO";
+unsigned int quantum_max=2;
+char *espera_estandar="2";
 
 // FUNCIONES QUE MANEJAN LOS HILOS DEL PP, luego se puede exportar a archivos STS y PROCER respectivamente.
 
@@ -119,6 +122,30 @@ int cargar_archivo_configuracion(){
 			valor = strtok(NULL,";");
 			if( valor != NULL ){
 				mpp=atoi(valor);
+			}
+		}
+
+		if( strstr(linea,"lpl")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				lpl=valor;
+			}
+		}
+
+		if( strstr(linea,"quantum_max")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				quantum_max=atoi(valor);
+			}
+		}
+
+		if( strstr(linea,"espera_estandar")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				espera_estandar=valor;
 			}
 		}
 	}
