@@ -125,17 +125,49 @@ int es_una_funcion(char* palabra){
 	}
 	return -1;
 }
-/*int ejecutar_funcion(char *palabra,pcb pcb){
-	stack primera = pcb.pila;
+int ejecutar_funcion(char *nombre_funcion,pcb pcb){
+	unsigned int posicion = buscar_inicio_de_funcion(nombre_funcion,pcb.codigo);
+	char *instruccion;
+	char *fin_funcion="fin_funcion ";
+	strcat(fin_funcion,nombre_funcion);
 
-	while( pcb.pila->siguiente != NULL){
-		if( strcmp(pcb.pila->funcion,palabra)==0){
+	//TODO:Se debe contar como 1 quantum por toda la funcion o 1 quantum x cada instruccion??
+	//TODO:Que asa si se suspende el programa aca
+	instruccion = leer_instruccion(pcb.codigo,posicion);
+	while( strcmp(instruccion,fin_funcion) != 0 ){
+		if( instruccion != NULL ){
+			if( ejecutar_instruccion(instruccion,&pcb) == -1){
+				printf("Error al ejecutar la instruccion:%s ,de la funcion %s\n",instruccion,nombre_funcion);
+				return -1;
+			}
+		}else{
+			printf("La instruccion leida de la funcion %s en la linea %d es nula\n",nombre_funcion,posicion);
+		}
+		posicion++;
+	}
+
+	return 0;
+}
+unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
+	unsigned int posicion=0;
+	char *resto=(char *)malloc(sizeof(codigo));
+	char *linea;
+
+	while( resto != NULL ){
+		linea=strtok(resto,"\n");
+		resto=strtok(NULL,"\0");
+
+		if( strstr(linea,nombre_funcion) != NULL ){
+			posicion++;//Me muevo a donde esta la primera instruccion
 			break;
 		}
-		pcb.pila=pcb.pila->siguiente;
+		posicion++;
 	}
+
+
+	free(resto);
+	return posicion;
 }
-*/
 int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 	int i;
 	char variable=palabra[0];
@@ -275,4 +307,3 @@ int es_un_delimitador(char caracter){
 	}
 	return -1;
 }
-

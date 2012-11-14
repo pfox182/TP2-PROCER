@@ -16,6 +16,8 @@ int ejecutar_instruccion(char * instruccion,pcb *pcb);
 int  es_un_token_nulo(char *palabra);
 int es_una_variable(char* palabra);
 int es_una_funcion(char* palabra);
+int ejecutar_funcion(char *nombre_funcion,pcb pcb);
+unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo);
 int ejecutar_asignacion(char *palabra,pcb pcb);
 char * extraer_numero(char *palabran,int posicion);
 int asignar_valor(char variable,int valor,data *datos);
