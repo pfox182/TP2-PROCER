@@ -8,6 +8,15 @@
 #ifndef PROCER_FUNCIONES_H_
 #define PROCER_FUNCIONES_H_
 
+//aux
+#include "../Estructuras/manejo_listas.h"
+#include "../Estructuras/manejo_listas_funciones.h"
+
+//CONSTANTES
+#define BLOQUEANTE 1
+#define NO_BLOQUEANTE 0
+
+
 //Funiones internas de PROCER.c
 int verificar_fin_ejecucion(pcb pcb,unsigned int cont_quantum,unsigned int cant_instrucciones);
 unsigned int cant_lineas(const char *codigo);
@@ -19,8 +28,9 @@ int es_una_funcion(char* palabra);
 int ejecutar_funcion(char *nombre_funcion,pcb pcb);
 unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo);
 int ejecutar_asignacion(char *palabra,pcb pcb);
-char * extraer_numero(char *palabran,int posicion);
+int ejecutar_io(char *instruccion_io);
 int asignar_valor(char variable,int valor,data *datos);
+char * extraer_numero(char *palabran,int posicion);
 int buscar_valor_de_variable(char letra,data *datos);
 int es_un_caracter(char c);
 int es_un_numero(char c);

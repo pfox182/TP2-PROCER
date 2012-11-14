@@ -8,20 +8,16 @@
 #include "PROCER_funciones.h"
 
 //Variables globales
-extern char *lpl="FIFO";
-extern unsigned int quantum_max=2;
-extern char *espera_estandar="2";
+extern char *lpl;
+extern unsigned int quantum_max;
+extern char *espera_estandar;
 
-int PROCER_funcion(){
-	char *buffer=leer_archivo("/home/utnso/hola");
-	pcb pcb;
-	pcb.pid=0;
-	pcb.pc=0;
-	char *codigo=leer_archivo("/home/utnso/hola");
-	pcb.codigo=codigo;
-	pcb.datos=cargar_datos(buffer);
-
-	//mostrar_datos(pcb.datos);
+void * PROCER_funcion(){
+	//TODO:BORRAR {
+		pcb pcb;
+		pcb.pid=0;
+		pcb.pc=0;
+	//}
 
 	//TODO:Saco el primer proceso de la lista de procesos listos
 
@@ -45,7 +41,6 @@ int PROCER_funcion(){
 		pcb.pc++;
 		cont_quantum++;
 	}
-	mostrar_datos(pcb.datos);
 	return 0;
 }
 

@@ -9,11 +9,7 @@
 #ifndef MANEJO_LISTAS_FUNCIONES_H_
 #define MANEJO_LISTAS_FUNCIONES_H_
 
-struct stack{
-	int linea;
-	char *funcion;
-	struct stack *siguiente;
-} typedef stack;
+#include "proceso.h"
 
 void agregar_funcion(stack **lista_funciones,char* funcion,int numero_linea);
 

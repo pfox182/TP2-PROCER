@@ -8,7 +8,7 @@
 #ifndef PROCER_H_
 #define PROCER_H_
 
-int PROCER_funcion();
+void * PROCER_funcion();
 
 
 #endif /* PROCER_H_ */

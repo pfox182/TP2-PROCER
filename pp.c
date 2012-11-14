@@ -15,6 +15,7 @@
  * Headers propios
  */
 #include "PP/LTS.h"
+#include "PP/PROCER.h"
 #include "FuncionesPropias/manejo_archivos.h"
 /*
  * Prototipos
@@ -40,12 +41,6 @@ void *STS_funcion (void *var){
 	//TODO Funcionalidad STS.
 	return 0;
 }
-
-void *PROCER_funcion (void *var){
-	//TODO Funcionalidad PROCER.
-	return 0;
-}
-
 
 void sigusr1_handler (int numeroSenial){
 	//TODO Suspender el proceso PROCER.

@@ -349,7 +349,7 @@ stack* sacar_funciones(char *buffer){
 	char *funcion;
 	char *resto=buffer;
 	char *linea;
-	stack *lista_funciones;
+	stack **lista_funciones=(stack **)malloc(sizeof(stack));;
 
 	numero_linea = 0;
 
@@ -365,7 +365,7 @@ stack* sacar_funciones(char *buffer){
 		}
 
 	}
-	return lista_funciones;
+	return *lista_funciones;
 }
 
 int agregar_proceso_a_lista_nuevos(proceso proceso){
