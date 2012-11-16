@@ -16,7 +16,9 @@
  */
 #include "PP/LTS.h"
 #include "PP/PROCER.h"
+#include "PP/STS.h"
 #include "FuncionesPropias/manejo_archivos.h"
+#include "Estructuras/proceso.h"
 /*
  * Prototipos
  */
@@ -31,17 +33,22 @@ unsigned int max_mps=10; //Maximo de procesos en el sistema
 unsigned int max_mpp=10; //Maximo valor de multiprogramacion
 unsigned int cantidad_hilos_iot=2; //Valor de hilos IOT
 unsigned int pid=0;
-char *lpl="FIFO";
+char *lpl="FIFO"; //Algoritmo de ordenamiento para lista de procesos listos.
 unsigned int quantum_max=2;
 char *espera_estandar="2";
+//Prioridades de los algoritmos.
+unsigned int lpn;
+unsigned int lpr;
+unsigned int finQ;
+unsigned int finIO;
+//Listas de procesos.
+listaProcesos *listaPN;
+listaProcesos *listaPR; //¿Que son los procesos reanudados?
+listaProcesos *listaFinQ;
+listaProcesos *listaFinIO;
+listaProcesos *listaPL;
 
-// FUNCIONES QUE MANEJAN LOS HILOS DEL PP, luego se puede exportar a archivos STS y PROCER respectivamente.
-
-void *STS_funcion (void *var){
-	//TODO Funcionalidad STS.
-	return 0;
-}
-
+// FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.
 void sigusr1_handler (int numeroSenial){
 	//TODO Suspender el proceso PROCER.
 	printf("Capture la senial SIGUSR1");

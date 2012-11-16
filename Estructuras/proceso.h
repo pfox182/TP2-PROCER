@@ -33,4 +33,10 @@ struct proceso{
 	pcb pcb;
 	int prioridad;
 }typedef proceso;
+
+struct listaProcesos{
+	proceso proceso;
+	struct listaProcesos *siguiente;
+}typedef listaProcesos;
+
 #endif /* PROCESO_H_ */
