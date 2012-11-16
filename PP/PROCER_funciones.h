@@ -25,6 +25,7 @@ int ejecutar_instruccion(char * instruccion,pcb *pcb);
 int  es_un_token_nulo(char *palabra);
 int es_una_variable(char* palabra);
 int es_una_funcion(char* palabra);
+int es_un_salto(char* palabra);
 int ejecutar_funcion(char *nombre_funcion,pcb pcb);
 unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo);
 int ejecutar_asignacion(char *palabra,pcb pcb);
@@ -35,5 +36,7 @@ int buscar_valor_de_variable(char letra,data *datos);
 int es_un_caracter(char c);
 int es_un_numero(char c);
 int es_un_delimitador(char caracter);
+int ejecutar_salto(char *tipo_de_salto,char *resto,pcb *pcb);
+int buscar_posicion_etiqueta(char *etiqueta,char *codigo);
 
 #endif /* PROCER_FUNCIONES_H_ */

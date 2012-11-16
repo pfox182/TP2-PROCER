@@ -123,6 +123,12 @@ int es_una_funcion(char* palabra){
 	}
 	return -1;
 }
+int es_un_salto(char* palabra){
+	if( strcmp(palabra,"snc")==0 || strcmp(palabra,"ssc")==0){
+		return 0;
+	}
+	return -1;
+}
 int ejecutar_funcion(char *nombre_funcion,pcb pcb){
 	nombre_funcion=strtok(nombre_funcion,"()");
 
@@ -175,7 +181,7 @@ unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
 	return posicion;
 }
 int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
-	int i;
+	int i,anterior;
 	char variable=palabra[0];
 	int valor_total=0;
 	int valor_aux=0;
@@ -215,7 +221,8 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 				printf("El numero extraido de %s es NULO\n",palabra);
 			}
 			i+=(strlen(numero)-1);//avanzo la cantidad de caracteres del numero
-			if( palabra[i-1] == '-' ){
+			anterior=strlen(numero)<1?1:strlen(numero);
+			if( palabra[i-anterior] == '-' ){
 				valor_total-=valor_aux;
 			}else{
 				valor_total+=valor_aux;
@@ -342,3 +349,59 @@ int es_un_delimitador(char caracter){
 	}
 	return -1;
 }
+int ejecutar_salto(char *tipo_de_salto,char *resto,pcb *pcb){
+	char variable,*etiqueta;
+	int valor_de_variable,posicion_etiqueta;
+
+	//Separo los elementos
+	variable=resto[0];
+	resto++;//Avanzo 2 espacios para saltear la variable y el espacio
+	resto++;
+	etiqueta=resto;
+	valor_de_variable=buscar_valor_de_variable(variable,(*pcb).datos);
+
+	if(strcmp(tipo_de_salto,"ssc")==0){
+		if( valor_de_variable == 0){
+			posicion_etiqueta=buscar_posicion_etiqueta(etiqueta,(*pcb).codigo);
+			if( posicion_etiqueta != -1){
+				(*pcb).pc=posicion_etiqueta;
+			}else{
+				return -1;
+			}
+
+		}
+	}else{
+		if( valor_de_variable != 0){
+			posicion_etiqueta=buscar_posicion_etiqueta(etiqueta,(*pcb).codigo);
+			if( posicion_etiqueta != -1){
+				(*pcb).pc=posicion_etiqueta;
+			}else{
+				return -1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int buscar_posicion_etiqueta(char *etiqueta,char *codigo){
+	int posicion=0;
+	char *linea;
+	char *resto=(char *)malloc(strlen(codigo));
+	memcpy(resto,codigo,strlen(codigo));
+
+	while(resto!=NULL){
+		linea=strtok(resto,"\n");
+		resto=strtok(NULL,"\0");
+		if(strstr(linea,etiqueta) != NULL){
+			break;
+		}
+		posicion++;
+	}
+
+	resto=NULL;
+	free(resto);
+
+	return posicion < cant_lineas(codigo)? posicion:-1;
+}
+
