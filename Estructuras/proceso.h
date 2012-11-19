@@ -32,6 +32,8 @@ struct pcb{
 struct proceso{
 	pcb pcb;
 	int prioridad;
+	int cliente_sock;
+	unsigned int pc_funcion;
 }typedef proceso;
 
 struct listaProcesos{

@@ -8,13 +8,23 @@
 #ifndef MANEJO_LISTAS_H_
 #define MANEJO_LISTAS_H_
 
+#include "../PROCER_funciones.h"
+
  struct nodo_proceso{
-	pcb pcb;
+	proceso proceso;
 	struct nodo_proceso *sig;
 } typedef nodo_proceso;
 
-void agregar_proceso(nodo_proceso **proceso,pcb pcb);
-pcb sacar_proceso(nodo_proceso **proceso);
+struct nodo_entrada_salida{
+	instruccion_io instruccion;
+	struct nodo_entrada_salida *sig;
+} typedef nodo_entrada_salida;
+
+void agregar_proceso(nodo_proceso **lista_procesos,proceso proceso);
+proceso sacar_proceso(nodo_proceso **proceso);
 void liberar_lista_de_procesos(nodo_proceso **proceso);
+void agregar_entrada_salida(nodo_entrada_salida **lista_bloqueados,instruccion_io instruccion_io);
+void agregar_primero_entrada_salida(nodo_entrada_salida **lista_bloqueados,instruccion_io instruccion_io);
+instruccion_io sacar_entrada_salida(nodo_entrada_salida **lista_bloqueados);
 
 #endif /* MANEJO_LISTAS_H_ */

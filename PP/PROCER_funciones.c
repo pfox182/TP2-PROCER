@@ -11,12 +11,15 @@
 extern char *lpl;
 extern unsigned int quantum_max;
 extern char *espera_estandar;
+extern char *espera_estandar_io;
+extern nodo_entrada_salida **lista_bloqueados;
+extern int cant_iot_disponibles;
 
 int verificar_fin_ejecucion(pcb pcb,unsigned int cont_quantum,unsigned int cant_instrucciones){
 	int fin=0;
 	if( strcmp(lpl,"RR") == 0){
 		if( cont_quantum >= quantum_max ){
-			printf("Se sobrepaso el quantum\n");//TODO: implementacion de meter en cola de quantum
+			printf("Se sobrepaso el quantum\n");
 			fin = -1;
 		}
 	}
@@ -61,7 +64,7 @@ char * leer_instruccion(char *codigo,unsigned int pc){
 	return instruccion;
 }
 
-int ejecutar_instruccion(char * instruccion,pcb *pcb){
+int ejecutar_instruccion(char * instruccion,proceso *proceso){
 	char *palabra;
 	if(instruccion == NULL){
 		printf("La instruccion es nula en 'ejecutar_instruccion'\n");
@@ -79,11 +82,27 @@ int ejecutar_instruccion(char * instruccion,pcb *pcb){
 		}
 
 		if( es_una_variable(palabra) == 0){//De la forma a=1 o a=b+c
-			ejecutar_asignacion(palabra,*pcb);
+			ejecutar_asignacion(palabra,(*proceso).pcb);
 		}
 
 		if( es_una_funcion(palabra) == 0){//De la forma f10()
-			ejecutar_funcion(palabra,*pcb);
+			ejecutar_funcion(palabra,*proceso);
+		}
+
+		if( es_un_salto(palabra) == 0){//De la forma snc o ssc
+			ejecutar_salto(palabra,resto,&((*proceso).pcb));//Le tengo que pasar la instruccion ej: snc b inicio_for
+			break;
+		}
+
+		if( es_un_imprimir(palabra) == 0){
+			ejecutar_imprimir(resto,*proceso);
+			return 1;
+		}
+
+		if(es_un_io(palabra) == 0){
+			if( ejecutar_io(palabra,*proceso) != -1 ){//-1 => NO hay hilos de i/o disponibles
+				return 1;//1 => Me fui a E/S
+			}
 		}
 
 	}
@@ -92,7 +111,11 @@ int ejecutar_instruccion(char * instruccion,pcb *pcb){
 }
 
 int  es_un_token_nulo(char *palabra){
-	if( strcmp("variables",palabra)==0 || strcmp("comienzo_programa",palabra)==0 || strcmp("",palabra)==0){
+	if( strcmp("variables",palabra)==0 || strcmp("comienzo_programa",palabra)==0 || strcmp("",palabra)==0 ){
+		return 0;
+	}
+
+	if( palabra[strlen(palabra)-1] == ':'){//Si es una etiqueta
 		return 0;
 	}
 	if( palabra[0] == '#'){
@@ -123,16 +146,34 @@ int es_una_funcion(char* palabra){
 	}
 	return -1;
 }
+
 int es_un_salto(char* palabra){
 	if( strcmp(palabra,"snc")==0 || strcmp(palabra,"ssc")==0){
+		printf("La instruccion %s es un salto\n",palabra);
 		return 0;
 	}
 	return -1;
 }
-int ejecutar_funcion(char *nombre_funcion,pcb pcb){
+int es_un_imprimir(char* palabra){
+	if( strstr(palabra,"imprimir")!= NULL){
+		printf("La instruccion %s es un imprimir\n",palabra);
+		return 0;
+	}
+	return -1;
+}
+int es_un_io(char* palabra){
+	if( strstr(palabra,"io(")!= NULL){
+		printf("La instruccion %s es un IO\n",palabra);
+		return 0;
+	}
+	return -1;
+}
+
+
+int ejecutar_funcion(char *nombre_funcion,proceso proceso){
 	nombre_funcion=strtok(nombre_funcion,"()");
 
-	unsigned int posicion = buscar_inicio_de_funcion(nombre_funcion,pcb.codigo);
+	unsigned int posicion = buscar_inicio_de_funcion(nombre_funcion,proceso.pcb.codigo);
 	char *instruccion;
 	char fin_funcion[30];
 	strcpy(fin_funcion,"fin_funcion ");
@@ -140,13 +181,16 @@ int ejecutar_funcion(char *nombre_funcion,pcb pcb){
 
 	//TODO:Se debe contar como 1 quantum por toda la funcion o 1 quantum x cada instruccion??
 	//TODO:Que asa si se suspende el programa aca
-	instruccion = leer_instruccion(pcb.codigo,posicion);
+	instruccion = leer_instruccion(proceso.pcb.codigo,posicion);
 	if( instruccion == NULL){
+		printf("La instruccion leida de la funcion %s en la linea %d es nula\n",nombre_funcion,posicion);
 		return -1;
 	}
+	printf("Antes del while, la instruccion %s, en la posicion %d\n ",instruccion,posicion);
 	while( strcmp(instruccion,fin_funcion) != 0 ){
 		if( instruccion != NULL ){
-			if( ejecutar_instruccion(instruccion,&pcb) == -1){
+			printf("La instruccion de la funcion %s, a ejecutar es %s, en la posicion %d\n",nombre_funcion,instruccion,posicion);
+			if( ejecutar_instruccion(instruccion,&proceso) == -1){
 				printf("Error al ejecutar la instruccion:%s ,de la funcion %s\n",instruccion,nombre_funcion);
 				return -1;
 			}
@@ -155,7 +199,7 @@ int ejecutar_funcion(char *nombre_funcion,pcb pcb){
 			return -1;
 		}
 		posicion++;
-		instruccion = leer_instruccion(pcb.codigo,posicion);
+		instruccion = leer_instruccion(proceso.pcb.codigo,posicion);
 	}
 
 	return 0;
@@ -171,24 +215,26 @@ unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
 	while( resto != NULL ){
 		linea=strtok(resto,"\n");
 		resto=strtok(NULL,"\0");
+		printf("La linea leida por inicio_funocion para %s es: %s\n",nombre_funcion,linea);
 		if( strcmp(linea,comienzo_funcion) == 0){
 			posicion++;//Me muevo a donde esta la primera instruccion
 			break;
 		}
 		posicion++;
 	}
+
+	printf("La definicion de la funcion %s comienza en la linea %d\n",nombre_funcion,posicion);
 	//free(resto);
 	return posicion;
 }
 int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 	int i,anterior;
 	char variable=palabra[0];
+	printf("El nombre de la variable es '%c', sacada de '%s'\n",variable,palabra);
 	int valor_total=0;
 	int valor_aux=0;
 	char *numero;
 	char se_espero='n';// n-> implica que no paso por ';' | s-> implica que si paso
-	char io='n';
-	//char *instruccion_io;
 
 	//Comprobamos que sea una asignacion
 	if( palabra[1] != '='){
@@ -214,14 +260,16 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 		}
 
 		if(es_un_numero(palabra[i]) == 0){
+			printf("Se comienza a extraer el numero a partir de la posicion %d de %s\n",i,palabra);
 			numero=extraer_numero(palabra,i);
+			printf("El numero extraido es %s ,de la linea '%s'\n",numero,palabra);
 			if( numero != NULL){
 				valor_aux=atoi(numero);
 			}else{
 				printf("El numero extraido de %s es NULO\n",palabra);
 			}
 			i+=(strlen(numero)-1);//avanzo la cantidad de caracteres del numero
-			anterior=strlen(numero)<1?1:strlen(numero);
+			anterior=strlen(numero)<1?1:strlen(numero);printf("El caracter anterior es %c\n",palabra[i-anterior]);
 			if( palabra[i-anterior] == '-' ){
 				valor_total-=valor_aux;
 			}else{
@@ -229,19 +277,21 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 			}
 		}
 		if( '+' == palabra[i] || '-' == palabra[i]){
+			printf("El simbolo es %c en %s\n",palabra[i],palabra);
 			//No hacer nada
 		}
 
 		if( ';' == palabra[i]){
 			se_espero='s';
 			numero=extraer_numero(palabra,i+1);
+			printf("El numero extraido para ';' es %s ,para %s\n",numero,palabra);
 			i+=(strlen(numero));//avanzo la cantidad de caracteres del numero
 			sleep(atoi(numero));
 		}
 	}
 
 	asignar_valor(variable,valor_total,pcb.datos);
-	if( se_espero == 'n' && io == 'n'){//Solo se espera si no se espero en ';' ni en 'io()'
+	if( se_espero == 'n'){//Solo se espera si no se espero en ';'
 		sleep(atoi(espera_estandar));
 	}
 	return 0;
@@ -252,36 +302,19 @@ int asignar_valor(char variable,int valor,data *datos){
 	for(i=0;i<26;i++){
 		if(datos[i].variable == variable){
 			datos[i].valor=valor;
+			printf("Se asigno el valor %d a la variable '%c'\n",valor,datos[i].variable);
 			return 0;
 		}
 	}
 	printf("No se encontro ninguna variable con el nombre '%c' para asignarle el valor %d\n",variable,valor);
 	return -1;
 }
-int ejecutar_io(char *instruccion_io){//io(tiempo,tipo)
-	/*int valor,tiempo,tipo,i;
-	char *s_tiempo,*s_tipo;
-
-	//Extraemos los datos ( i=3 para posicionarme en el primer dato )
-	for(i=3;i<strlen(instruccion_io) && (instruccion_io[i] != ',');i++){
-		*s_tiempo=instruccion_io[i];
-		s_tiempo++;
-	}
-	*s_tipo=instruccion_io[i+1];//Poruque solo es un numero: 1 o 0
-	tiempo=atoi(s_tiempo);
-	tipo=atoi(s_tipo);
-
-	//Me comunico con el cliente para pedirle el io()
-	//TODO:IMPLEMENTAR
-	sleep(tiempo);
-*/
-	return 0;
-}
 
 int buscar_valor_de_variable(char letra,data *datos){
 	int i;
 	for(i=0;i<26;i++){
 		if(datos[i].variable == letra){
+			printf("El valor corrspondiente a la variable %c es %d\n",letra,datos[i].valor);
 			return datos[i].valor;
 		}
 	}
@@ -349,6 +382,7 @@ int es_un_delimitador(char caracter){
 	}
 	return -1;
 }
+
 int ejecutar_salto(char *tipo_de_salto,char *resto,pcb *pcb){
 	char variable,*etiqueta;
 	int valor_de_variable,posicion_etiqueta;
@@ -358,14 +392,18 @@ int ejecutar_salto(char *tipo_de_salto,char *resto,pcb *pcb){
 	resto++;//Avanzo 2 espacios para saltear la variable y el espacio
 	resto++;
 	etiqueta=resto;
+	printf("Los valores extraidos del salto son: %s ,%c y %s \n",tipo_de_salto,variable,etiqueta);
 	valor_de_variable=buscar_valor_de_variable(variable,(*pcb).datos);
 
 	if(strcmp(tipo_de_salto,"ssc")==0){
 		if( valor_de_variable == 0){
 			posicion_etiqueta=buscar_posicion_etiqueta(etiqueta,(*pcb).codigo);
+			printf("Sali de la funcion\n");
 			if( posicion_etiqueta != -1){
 				(*pcb).pc=posicion_etiqueta;
+				printf("La posicion de la etiqueta es %d\n",posicion_etiqueta);
 			}else{
+				printf("La posicion de la etiqueta es %d\n",posicion_etiqueta);
 				return -1;
 			}
 
@@ -375,12 +413,14 @@ int ejecutar_salto(char *tipo_de_salto,char *resto,pcb *pcb){
 			posicion_etiqueta=buscar_posicion_etiqueta(etiqueta,(*pcb).codigo);
 			if( posicion_etiqueta != -1){
 				(*pcb).pc=posicion_etiqueta;
+				printf("El valor es distinto de 0, se deberia saltar a la linea %d, la proxima instruccion es %d\n",posicion_etiqueta,(*pcb).pc);
 			}else{
 				return -1;
 			}
 		}
 	}
 
+	sleep(atoi(espera_estandar));
 	return 0;
 }
 
@@ -403,5 +443,64 @@ int buscar_posicion_etiqueta(char *etiqueta,char *codigo){
 	free(resto);
 
 	return posicion < cant_lineas(codigo)? posicion:-1;
+}
+
+int ejecutar_imprimir(char *resto,proceso proceso){
+	instruccion_io instruccion;
+	int i;
+	int valor=buscar_valor_de_variable(resto[0],proceso.pcb.datos);
+	char *numero=(char *)malloc(strlen("00000"));
+	char *msj=(char *)malloc(strlen("IMPRIMIENDO VARIABLE a: 00000"));
+	strcpy(msj,"IMPRIMIENDO VARIABLE ");
+	strcat(msj,resto);
+	strcat(msj,": ");
+	sprintf(numero,"%d",valor);
+
+	for(i=0;i<strlen(numero);i++){
+		msj[strlen(msj)]=numero[i];
+	}
+
+	printf("El mensaje es %s\n",msj);
+
+	instruccion.proceso=proceso;
+	instruccion.instruccion="imprimir";
+	instruccion.mensaje=msj;
+
+	//TODO:implementar semaforos
+	agregar_entrada_salida(lista_bloqueados,instruccion);
+	printf("Agregue a E/S\n");
+
+	sleep(atoi(espera_estandar_io));
+
+	return 0;
+}
+
+int ejecutar_io(char *palabra,proceso proceso){
+	instruccion_io instruccion;
+
+	char *numero=strtok(palabra,"(");
+	numero=strtok(NULL,",");
+	char *tipo=strtok(NULL,")");
+
+	instruccion.proceso=proceso;
+	instruccion.instruccion="io";
+	instruccion.mensaje=numero;//El mensaje tiene el tiempo de espera
+
+	//TODO:implementar semaforos
+	if( atoi(tipo) == BLOQUEANTE){
+		agregar_entrada_salida(lista_bloqueados,instruccion);
+		printf("Agregue a E/S\n");
+	}else{
+		if( cant_iot_disponibles > 0){
+			agregar_primero_entrada_salida(lista_bloqueados,instruccion);
+		}else{
+			printf("Error iot ocupados\n");
+			return -1;
+		}
+	}
+
+	//sleep(atoi(numero));
+
+	return 0;
 }
 

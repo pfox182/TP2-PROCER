@@ -16,20 +16,26 @@
 #define BLOQUEANTE 1
 #define NO_BLOQUEANTE 0
 
-
+//Estructuras
+struct instruccion_io{
+	proceso proceso;
+	char *instruccion;//imprimir o io
+	char *mensaje;
+}typedef instruccion_io;
 //Funiones internas de PROCER.c
 int verificar_fin_ejecucion(pcb pcb,unsigned int cont_quantum,unsigned int cant_instrucciones);
 unsigned int cant_lineas(const char *codigo);
 char * leer_instruccion(char *codigo,unsigned int pc);
-int ejecutar_instruccion(char * instruccion,pcb *pcb);
+int ejecutar_instruccion(char * instruccion,proceso *proceso);
 int  es_un_token_nulo(char *palabra);
 int es_una_variable(char* palabra);
 int es_una_funcion(char* palabra);
 int es_un_salto(char* palabra);
-int ejecutar_funcion(char *nombre_funcion,pcb pcb);
+int es_un_imprimir(char* palabra);
+int es_un_io(char* palabra);
+int ejecutar_funcion(char *nombre_funcion,proceso proceso);
 unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo);
 int ejecutar_asignacion(char *palabra,pcb pcb);
-int ejecutar_io(char *instruccion_io);
 int asignar_valor(char variable,int valor,data *datos);
 char * extraer_numero(char *palabran,int posicion);
 int buscar_valor_de_variable(char letra,data *datos);
@@ -38,5 +44,7 @@ int es_un_numero(char c);
 int es_un_delimitador(char caracter);
 int ejecutar_salto(char *tipo_de_salto,char *resto,pcb *pcb);
 int buscar_posicion_etiqueta(char *etiqueta,char *codigo);
+int ejecutar_imprimir(char *resto,proceso proceso);
+int ejecutar_io(char *palabra,proceso proceso);
 
 #endif /* PROCER_FUNCIONES_H_ */
