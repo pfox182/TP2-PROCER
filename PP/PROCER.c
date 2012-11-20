@@ -29,7 +29,6 @@ void * PROCER_funcion(){
 		pcb.pc=0;
 		char *codigo=leer_archivo("/home/utnso/hola");
 		pcb.codigo=codigo;
-		pcb.datos=cargar_datos(buffer);
 	//pcb.pila=sacar_funciones(leer_archivo("/home/utnso/hola"));
 
 	proceso.pcb=pcb;
@@ -66,7 +65,5 @@ void * PROCER_funcion(){
 		cont_quantum++;
 	}
 	printf("El PC es %d\n",proceso.pcb.pc);
-	mostrar_lista(lista_bloqueados);
-	mostrar_datos(proceso.pcb.datos);
 	return 0;
 }

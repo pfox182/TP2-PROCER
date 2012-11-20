@@ -8,7 +8,14 @@
 #ifndef MANEJO_LISTAS_H_
 #define MANEJO_LISTAS_H_
 
-#include "../PROCER_funciones.h"
+#include "proceso.h"
+
+//Estructuras
+struct instruccion_io{
+	proceso proceso;
+	char *instruccion;//imprimir o io
+	char *mensaje;
+}typedef instruccion_io;
 
  struct nodo_proceso{
 	proceso proceso;

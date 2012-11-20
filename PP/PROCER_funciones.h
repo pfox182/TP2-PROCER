@@ -16,12 +16,6 @@
 #define BLOQUEANTE 1
 #define NO_BLOQUEANTE 0
 
-//Estructuras
-struct instruccion_io{
-	proceso proceso;
-	char *instruccion;//imprimir o io
-	char *mensaje;
-}typedef instruccion_io;
 //Funiones internas de PROCER.c
 int verificar_fin_ejecucion(pcb pcb,unsigned int cont_quantum,unsigned int cant_instrucciones);
 unsigned int cant_lineas(const char *codigo);
