@@ -27,7 +27,9 @@ void * IOT_funcion(){
 	instruccion=sacar_entrada_salida(lista_bloqueados);
 
 	if( strstr(instruccion.instruccion,"imprimir") != NULL ){
-		send(instruccion.proceso.cliente_sock,instruccion.mensaje,sizeof(instruccion.mensaje),0);
+		if ( send(instruccion.proceso.cliente_sock,instruccion.mensaje,sizeof(instruccion.mensaje),0) == -1){
+			printf("Error no se pudo enviar el mensaje imprimir en el hilo IOT");
+		}
 		agregar_proceso(lista_finio,instruccion.proceso);
 		//habilitar STS para que pueda retirar
 	}
