@@ -15,8 +15,8 @@
 
 
 //Listas globales
-extern nodo_entrada_salida **lista_bloqueados;
-extern nodo_proceso **lista_finio;
+extern nodo_proceso **listaFinIO;
+extern nodo_entrada_salida  **listaBloqueados;
 
 //Variables globales
 extern int cant_iot_disponibles;
@@ -25,26 +25,29 @@ void * IOT_funcion(){
 
 	//TODO: Productor-Consumidor implementar
 
-	//SEMAFORO
+	//TODO:implementar semaforos
 	cant_iot_disponibles--;//IOT Ocupado
 
 	instruccion_io instruccion;
 
-	instruccion=sacar_entrada_salida(lista_bloqueados);
+	//TODO:implementar semaforos
+	instruccion=sacar_entrada_salida(listaBloqueados);
 
 	if( strstr(instruccion.instruccion,"imprimir") != NULL ){
-		if ( send(instruccion.proceso.cliente_sock,instruccion.mensaje,sizeof(instruccion.mensaje),0) == -1){
+		if ( send(instruccion.proceso.cliente_sock,instruccion.mensaje,strlen(instruccion.mensaje),0) == -1){
 			printf("Error no se pudo enviar el mensaje imprimir en el hilo IOT");
 		}
-		agregar_proceso(lista_finio,instruccion.proceso);
-		//SEMAFORO
+		//TODO:implementar semaforos
+		agregar_proceso(listaFinIO,instruccion.proceso);
+		//TODO:implementar semaforos
 		cant_iot_disponibles++;//Libero un IOT;
 		//habilitar STS para que pueda retirar
 	}
 	else{
 		sleep(atoi(instruccion.mensaje));
-		agregar_proceso(lista_finio,instruccion.proceso);
-		//SEMAFORO
+		//TODO:implementar semaforos
+		agregar_proceso(listaFinIO,instruccion.proceso);
+		//TODO:implementar semaforos
 		cant_iot_disponibles++;//Libero un IOT
 		//habilitar STS para que pueda retirar
 	}

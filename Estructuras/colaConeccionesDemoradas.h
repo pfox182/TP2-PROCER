@@ -13,6 +13,8 @@ struct coneccionesDemoradas {
 	struct coneccionesDemoradas *siguiente;
 } typedef coneccionesDemoradas;
 
-void encolar_solicitud(int cliente_sock,coneccionesDemoradas *coneccionesDemoradas);
+void encolar_solicitud(coneccionesDemoradas **listaConexionesDemoradas,int socket_client);
+void encolar_primero(coneccionesDemoradas **listaConexionesDemoradas,int socket_client);
+int sacar_conexion_demorada(coneccionesDemoradas **listaConnecionesDemoradas);
 
 #endif /* COLACONECCIONESDEMORADAS_H_ */

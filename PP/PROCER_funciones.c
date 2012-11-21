@@ -8,23 +8,28 @@
 
 #include "PROCER_funciones.h"
 
+//Variables globales
 extern char *lpl;
 extern unsigned int quantum_max;
 extern char *espera_estandar;
 extern char *espera_estandar_io;
-extern nodo_entrada_salida **lista_bloqueados;
 extern int cant_iot_disponibles;
 
-int verificar_fin_ejecucion(pcb pcb,unsigned int cont_quantum,unsigned int cant_instrucciones){
+//Listas globales
+extern nodo_entrada_salida **listaBloqueados;
+extern nodo_proceso **listaFinQuantum;
+
+int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned int cant_instrucciones){
 	int fin=0;
 	if( strcmp(lpl,"RR") == 0){
 		if( cont_quantum >= quantum_max ){
+			agregar_proceso(listaFinQuantum,proceso);
 			printf("Se sobrepaso el quantum\n");
 			fin = -1;
 		}
 	}
-	if( pcb.pc > cant_instrucciones){
-		printf("Se sobrepaso el pc-d>%d cant_inst->%d\n",pcb.pc,cant_instrucciones);
+	if( proceso.pcb.pc > cant_instrucciones){
+		printf("Se sobrepaso el pc-d>%d cant_inst->%d\n",proceso.pcb.pc,cant_instrucciones);
 		fin = -1;
 	}
 	return fin;
@@ -467,7 +472,7 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	instruccion.mensaje=msj;
 
 	//TODO:implementar semaforos
-	agregar_entrada_salida(lista_bloqueados,instruccion);
+	agregar_entrada_salida(listaBloqueados,instruccion);
 	printf("Agregue a E/S\n");
 
 	sleep(atoi(espera_estandar_io));
@@ -488,11 +493,13 @@ int ejecutar_io(char *palabra,proceso proceso){
 
 	//TODO:implementar semaforos
 	if( atoi(tipo) == BLOQUEANTE){
-		agregar_entrada_salida(lista_bloqueados,instruccion);
+		proceso.pcb.pc++;
+		agregar_entrada_salida(listaBloqueados,instruccion);
 		printf("Agregue a E/S\n");
 	}else{
 		if( cant_iot_disponibles > 0){
-			agregar_primero_entrada_salida(lista_bloqueados,instruccion);
+			proceso.pcb.pc++;
+			agregar_primero_entrada_salida(listaBloqueados,instruccion);
 		}else{
 			printf("Error iot ocupados\n");
 			return -1;

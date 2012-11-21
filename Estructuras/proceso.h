@@ -36,9 +36,19 @@ struct proceso{
 	unsigned int pc_funcion;
 }typedef proceso;
 
-struct listaProcesos{
+struct nodo_proceso{
 	proceso proceso;
-	struct listaProcesos *siguiente;
-}typedef listaProcesos;
+	struct nodo_proceso *sig;
+} typedef nodo_proceso;
 
+struct instruccion_io{
+	proceso proceso;
+	char *instruccion;//imprimir o io
+	char *mensaje;
+}typedef instruccion_io;
+
+struct nodo_entrada_salida{
+	instruccion_io instruccion;
+	struct nodo_entrada_salida *sig;
+} typedef nodo_entrada_salida;
 #endif /* PROCESO_H_ */

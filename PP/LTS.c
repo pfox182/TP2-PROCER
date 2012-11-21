@@ -14,26 +14,38 @@
 #include <netinet/in.h>
 
 #include "../Estructuras/proceso.h"
+#include "../Estructuras/manejo_listas.h"
 #include "../Estructuras/colaConeccionesDemoradas.h"
 #include "../Estructuras/manejo_listas_funciones.h"
 
 #define BUFFER_SIZE 1024
 
+//aux
+void mostrar_funciones(stack *pila);
+extern int global;
 //Prototipos de funcion
 int server_socket(char *puerto);
-int recvall(int client_fd,char *buffer,int *header,int flag);
 proceso crear_proceso(char *buffer);
 data* cargar_datos(char *buffer);
 void error(const char *msg);
 stack* sacar_funciones(char *buffer);
 int notifica_sobrepaso_mps(int cliente_sock);
 int notificar_demora_mpp(int cliente_sock);
-int agregar_proceso_a_lista_nuevos(proceso proceso);
 int administrar_conexion(int cliente_sock,fd_set *master,char *buffer);
-
+int validar_mps_mpp(int cliente_sock);
+int recibir_codigo(int cliente_sock,fd_set *master,char *buffer);
+int recvall(int client_fd,char *buffer,int *header,int flag);
 //Variables globales
 extern unsigned int mps,mpp,max_mps,max_mpp; //Se usa extern para indicar que son variables globales de otro archivo
 extern unsigned int pid;
+
+//Listas
+extern nodo_proceso **listaProcesosNuevos;
+extern nodo_proceso **listaProcesosReanudados;
+extern nodo_proceso **listaProcesosSuspendidos;
+extern coneccionesDemoradas **listaConeccionesDemoradas;
+extern nodo_proceso **listaTerminados;
+
 
 void * LTS_funcion(void * var){
 
@@ -146,65 +158,45 @@ int server_socket(char *puerto)
  encolaciones necesarias.
  ****************************************/
 int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
-	int header,nbytes;
 	proceso proceso;
-	coneccionesDemoradas *coneccionesDemoradas;
 
-	//TODO:¿Fijarse si se reanudo algun proceso?
+	printf("Entre a administrar conexion\n");
 
-	//TODO:Antes de crear un nuevo proceso hay que fijarce que no halla otra coneccion demorada
-
-	//Validamos las variables mps y mpp
-		 //TODO:implementar validacion
-	if( mps >= max_mps || mpp >= max_mpp){//Si no entra al if => todo. ok
-		if( mps >= max_mps){
-			//notifica_sobrepaso_mps(cliente_sock);
-			close(cliente_sock);
-		}else{
-			//notificar_demora_mpp(cliente_sock);
-			encolar_solicitud(cliente_sock, coneccionesDemoradas);
+	int socket_demorado=sacar_conexion_demorada(listaConeccionesDemoradas);
+	printf("Pase la obtencio de socker demorado, que es %d\n",socket_demorado);
+	if( socket_demorado > 0 && validar_mps_mpp(socket_demorado)==0){
+		printf("Entre a socket demorado\n");
+		if(recibir_codigo(socket_demorado,master,buffer) == 0){
+			printf("Recibi el codigo del socket demorado\n");
+			proceso = crear_proceso(buffer);
+			//TODO:implementar semaforos
+			agregar_proceso(listaProcesosNuevos,proceso);
+			 //TODO: IMPLEMENTAR SEMAFOROS
+			 mps++;
+			 mpp++;
+		}
+	}else{
+		if( socket_demorado >0 ){
+			printf("Volvi a encolar el socket demorado\n");
+			encolar_primero(listaConeccionesDemoradas,socket_demorado);
 		}
 	}
 
-	 //Recibimos el header del PI
-	 if( (nbytes = recv(cliente_sock,&header,sizeof(header),0)) <= 0){
-		 //Error o conexion cerrada por el cliente
-		 if( nbytes == 0){
-			 //Conexion cerrada
-			 printf("El socket %d cerro la conexion\n",cliente_sock);
-		 }else{
-			 error("Error al recibir datos del header");
-		 }
-		 close(cliente_sock);
-		 FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
-	 }
+	printf("Pase la parte de socket demorado\n");
 
-	 printf("El header recibido es: %d \n",header);
-
-	 if ((nbytes = recvall(cliente_sock,buffer,&header,0)) <= 0){
-		 //Error o conexion cerrada por el cliente
-		 if( nbytes == 0){
-			 //Conexion cerrada
-			 printf("El socket %d cerro la conexion\n",cliente_sock);
-		 }else{
-			 error("Error al recibir datos del archivo");
-		 }
-
-		 printf("Se recibio:\n %s",buffer);
-
-		 //Enviar confirmacion de que se recibio algo
-		 char *msj="Recivi el mensaje";
-		 if( (nbytes=send(cliente_sock,msj,nbytes,19)) <= 0){
-			 if(nbytes == 0){
-				 printf("El cliente %i cerro la conexion y no se envio msj de confirmacion.\n",cliente_sock);
-			 }else{
-				 error("Error al enviar confirmacion");
-			 }
-		 }
-
+	 if(validar_mps_mpp(cliente_sock)==0 ){
+		 if(recibir_codigo(cliente_sock,master,buffer) == 0){
+		 printf("Recibi el codigo del proceso nuevo, que es: %s\n",buffer);
 		 //Creamos el proceso
-
 		 proceso = crear_proceso(buffer);
+		 //TODO:implementar semaforos
+		 agregar_proceso(listaProcesosNuevos,proceso);
+		 global=1;
+
+		 //TODO: IMPLEMENTAR SEMAFOROS
+		 mps++;
+		 mpp++;
+
 		 printf("El proceso creado fue:\n");
 		 	printf("\tPID:%d\n",proceso.pcb.pid);
 		 	printf("\tPC:%d\n",proceso.pcb.pc);
@@ -213,19 +205,72 @@ int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
 		 	for( i=0;i<26;i++){
 		 		printf("\t variable: %c valor:%d\n",proceso.pcb.datos[i].variable,proceso.pcb.datos[i].valor);
 		 	}
+		 	mostrar_funciones(proceso.pcb.pila);
 		 printf("\tPrioridad:%d\n",proceso.prioridad);
 
-		 //TODO: IMPLEMENTAR SEMAFOROS PARA LA LISTA DE NUEVOS
-		 //agregar_proceso_a_lista_nuevos(proceso);
-
-		 //TODO: IMPLEMENTAR SEMAFOROS
-		 mps++;
-		 mpp++;
 
 		 close(cliente_sock);
 		 FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
 	 }
+	 }
+	 return 0;
+}
+int validar_mps_mpp(int cliente_sock){
+	//TODO:implementar semaforos
+	if( mps >= max_mps || mpp >= max_mpp){//Si no entra al if => todo. ok
+		if( mps >= max_mps){
+			//notifica_sobrepaso_mps(cliente_sock);
+			printf("Sobrepaso de mps\n");
+			close(cliente_sock);
+			return -1;
+		}else{
+			//notificar_demora_mpp(cliente_sock);
+			printf("Sobrepaso de mpp\n");
+			encolar_solicitud(listaConeccionesDemoradas,cliente_sock);
+			return -1;
+		}
+	}
+	printf("mps y mpp ok\n");
+	return 0;
+}
+int recibir_codigo(int cliente_sock,fd_set *master,char *buffer){
+	int nbytes;
+	int header;
 
+	printf("Entre en recibir codigo\n");
+	//Recibimos el header del PI
+	 if( (nbytes = recv(cliente_sock,&header,sizeof(header),0)) <= 0){
+		 //Error o conexion cerrada por el cliente
+		 if( nbytes == 0){
+			 //Conexion cerrada
+			 printf("El socket %d cerro la conexion\n",cliente_sock);
+			 return -1;
+		 }else{
+			 error("Error al recibir datos del header");
+			 return -1;
+		 }
+		 //close(cliente_sock);
+		 //FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
+	 }
+
+	 printf("El header recibido es: %d \n",header);
+
+	 if (( recvall(cliente_sock,buffer,&header,0)) == -1){
+		 error("Error al recibir datos del archivo");
+		 return -1;
+	 }
+
+	 //Enviar confirmacion de que se recibio algo
+	 char *msj="Recivi el mensaje";
+	 if( (nbytes=send(cliente_sock,msj,strlen(msj),0)) <= 0){
+		 if(nbytes == 0){
+			 printf("El cliente %i cerro la conexion y no se envio msj de confirmacion.\n",cliente_sock);
+			 return -1;
+		 }else{
+			 error("Error al enviar confirmacion");
+			 return -1;
+		 }
+	 }
 	 return 0;
 }
 
@@ -269,9 +314,8 @@ proceso crear_proceso(char *buffer){
 	pcb.codigo = (char *)malloc(sizeof(buffer));
 	memcpy(pcb.codigo,buffer,sizeof(buffer));
 
-	pcb.datos = cargar_datos(buffer);
 	pcb.pila= sacar_funciones(buffer);
-
+	pcb.datos = cargar_datos(buffer);
 
 	free(buffer);
 
@@ -289,7 +333,8 @@ data* cargar_datos(char *buffer){
 	char j;
 	char *separacion;
 	int flag;
-	char *resto=buffer;
+	char *resto=(char *)malloc(strlen(buffer));
+	memcpy(resto,buffer,strlen(buffer));
 	char *linea;
 
 	//Inicializo el vector de variables
@@ -330,16 +375,8 @@ data* cargar_datos(char *buffer){
 
 	puntero = &datos[0];
 
-
-
-
-	//Muestro vector
-	/*
-	for (i = 0; i < 26 ; i++)
-	{
-		printf("El valor de datos[%d] es var:%c valor:%d,\n",i,datos[i].variable,datos[i].valor);
-	}
-	*/
+	resto=NULL;
+	free(resto);
 
 	return puntero;
 }
@@ -347,7 +384,8 @@ data* cargar_datos(char *buffer){
 stack* sacar_funciones(char *buffer){
 	int numero_linea;
 	char *funcion;
-	char *resto=buffer;
+	char *resto=(char *)malloc(strlen(buffer));
+	memcpy(resto,buffer,strlen(buffer));
 	char *linea;
 	stack **lista_funciones=(stack **)malloc(sizeof(stack));;
 
@@ -358,18 +396,16 @@ stack* sacar_funciones(char *buffer){
 		linea = strtok(resto,"\n");
 		resto = strtok(NULL,"\0");
 		numero_linea++;
-
 		if( strstr(linea,"()") != NULL){
 			funcion = strtok(linea,"()");
 			agregar_funcion(lista_funciones,funcion,numero_linea);
 		}
 
 	}
-	return *lista_funciones;
-}
 
-int agregar_proceso_a_lista_nuevos(proceso proceso){
-	return 0;
+	resto=NULL;
+	free(resto);
+	return *lista_funciones;
 }
 
 int notifica_sobrepaso_mps(int cliente_sock){
@@ -389,4 +425,12 @@ void error(const char *msg)
 {
     perror(msg);
     exit(1);
+}
+
+void mostrar_funciones(stack *pila){
+	//Muestro vector
+	while( pila != NULL){
+		printf("Funcion %s , en la linea %d\n",(*pila).funcion,(*pila).linea);
+		pila=(*pila).siguiente;
+	}
 }

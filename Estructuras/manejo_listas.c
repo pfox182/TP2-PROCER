@@ -121,3 +121,27 @@ instruccion_io sacar_entrada_salida(nodo_entrada_salida **lista_bloqueados){
 
 	return instruccion;
 }
+
+void agregar_lista_de_procesos(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,int prioridad){
+
+	proceso proceso;
+	nodo_proceso **listaAgregarAux = listaAgregar;
+
+	while (listaAgregarAux != NULL){
+		proceso = sacar_proceso(listaAgregarAux);
+		proceso.prioridad = prioridad;
+		agregar_proceso(listaProcesos,proceso);
+		(*listaAgregarAux) = (*listaAgregarAux)->sig;
+	}
+}
+
+void mostrar_lista(nodo_proceso **listaProcesos){
+	proceso proceso;
+	nodo_proceso **listaAgregarAux = listaProcesos;
+
+	while (listaAgregarAux != NULL){
+		proceso = sacar_proceso(listaAgregarAux);
+		printf("El proceso de la lista es: pid->%d , pc->%d\n",proceso.pcb.pid,proceso.pcb.pc);
+		(*listaAgregarAux) = (*listaAgregarAux)->sig;
+	}
+}

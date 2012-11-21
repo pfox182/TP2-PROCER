@@ -10,28 +10,13 @@
 
 #include "proceso.h"
 
-//Estructuras
-struct instruccion_io{
-	proceso proceso;
-	char *instruccion;//imprimir o io
-	char *mensaje;
-}typedef instruccion_io;
-
- struct nodo_proceso{
-	proceso proceso;
-	struct nodo_proceso *sig;
-} typedef nodo_proceso;
-
-struct nodo_entrada_salida{
-	instruccion_io instruccion;
-	struct nodo_entrada_salida *sig;
-} typedef nodo_entrada_salida;
-
 void agregar_proceso(nodo_proceso **lista_procesos,proceso proceso);
 proceso sacar_proceso(nodo_proceso **proceso);
 void liberar_lista_de_procesos(nodo_proceso **proceso);
 void agregar_entrada_salida(nodo_entrada_salida **lista_bloqueados,instruccion_io instruccion_io);
 void agregar_primero_entrada_salida(nodo_entrada_salida **lista_bloqueados,instruccion_io instruccion_io);
 instruccion_io sacar_entrada_salida(nodo_entrada_salida **lista_bloqueados);
+void agregar_lista_de_procesos(nodo_proceso **listaProcesosListos, nodo_proceso **listaAAgregar,int prioridad);
+void mostrar_lista(nodo_proceso **listaProcesos);
 
 #endif /* MANEJO_LISTAS_H_ */

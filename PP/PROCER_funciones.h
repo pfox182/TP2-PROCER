@@ -17,7 +17,7 @@
 #define NO_BLOQUEANTE 0
 
 //Funiones internas de PROCER.c
-int verificar_fin_ejecucion(pcb pcb,unsigned int cont_quantum,unsigned int cant_instrucciones);
+int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned int cant_instrucciones);
 unsigned int cant_lineas(const char *codigo);
 char * leer_instruccion(char *codigo,unsigned int pc);
 int ejecutar_instruccion(char * instruccion,proceso *proceso);
