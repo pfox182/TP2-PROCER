@@ -7,12 +7,13 @@
 #include "../Estructuras/manejo_listas.h"
 
 #include "PROCER_funciones.h"
+//AUX
+extern int global_iot;
 
 //Variables globales
 extern char *lpl;
 extern unsigned int quantum_max;
 extern char *espera_estandar;
-extern char *espera_estandar_io;
 extern int cant_iot_disponibles;
 
 //Listas globales
@@ -29,7 +30,7 @@ int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned i
 		}
 	}
 	if( proceso.pcb.pc > cant_instrucciones){
-		printf("Se sobrepaso el pc-d>%d cant_inst->%d\n",proceso.pcb.pc,cant_instrucciones);
+		printf("Se sobrepaso el pc->%d cant_inst->%d\n",proceso.pcb.pc,cant_instrucciones);
 		fin = -1;
 	}
 	return fin;
@@ -331,10 +332,12 @@ char * extraer_numero(char *palabra,int posicion){//12+b o 12;
 	int i=posicion;
 	int j=0;
 	char *numero=(char *)malloc(strlen(palabra));
+	bzero(numero,sizeof(numero));
 
 	if( es_un_numero(palabra[posicion]) == 0){
 		while( es_un_delimitador(palabra[i]) != 0){
 			numero[j]=palabra[i];
+			printf("El caracter leido por extraer_numero es:%c\n",palabra[i]);
 			i++;
 			j++;
 		}
@@ -383,6 +386,9 @@ int es_un_delimitador(char caracter){
 		return 0;
 	}
 	if(caracter == '\0'){
+		return 0;
+	}
+	if(caracter == '\n'){
 		return 0;
 	}
 	return -1;
@@ -451,6 +457,7 @@ int buscar_posicion_etiqueta(char *etiqueta,char *codigo){
 }
 
 int ejecutar_imprimir(char *resto,proceso proceso){
+	printf("Entre en ejecutar_imprimir()\n");
 	instruccion_io instruccion;
 	int i;
 	int valor=buscar_valor_de_variable(resto[0],proceso.pcb.datos);
@@ -473,9 +480,8 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 
 	//TODO:implementar semaforos
 	agregar_entrada_salida(listaBloqueados,instruccion);
+	global_iot=1;
 	printf("Agregue a E/S\n");
-
-	sleep(atoi(espera_estandar_io));
 
 	return 0;
 }
@@ -495,11 +501,13 @@ int ejecutar_io(char *palabra,proceso proceso){
 	if( atoi(tipo) == BLOQUEANTE){
 		proceso.pcb.pc++;
 		agregar_entrada_salida(listaBloqueados,instruccion);
+		global_iot=1;
 		printf("Agregue a E/S\n");
 	}else{
 		if( cant_iot_disponibles > 0){
 			proceso.pcb.pc++;
 			agregar_primero_entrada_salida(listaBloqueados,instruccion);
+			global_iot=1;
 		}else{
 			printf("Error iot ocupados\n");
 			return -1;

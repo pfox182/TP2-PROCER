@@ -11,11 +11,22 @@
 extern nodo_proceso **listaProcesosListos;
 extern nodo_proceso **listaTerminados;
 
+//AUX
+extern int global_procer;
+int esperar_a_que_se_llene_procer(nodo_proceso **lista);
+void mostrar_datos(data *datos);
+
+
 void * PROCER_funcion(){
-	//TODO:implementar semaforos
+	esperar_a_que_se_llene_procer(listaProcesosListos);
+	printf("Sali de espera en PROCER\n");
 	proceso proceso=sacar_proceso(listaProcesosListos);
+	global_procer=0;
+	printf("Se saco el proceso PID:%d de listos\n",proceso.pcb.pid);
+	printf("El codigo es:\n%s\n",proceso.pcb.codigo);
 
 	unsigned int cant_instrucciones = cant_lineas(proceso.pcb.codigo);
+	printf("La cantidad de instrucciones son %d\n",cant_instrucciones);
 	char *instruccion;
 	unsigned int cont_quantum = 0;
 	int retorno;
@@ -36,8 +47,10 @@ void * PROCER_funcion(){
 				}
 			}else{
 				printf("Finalizo la ejecucion\n");
+				mostrar_datos(proceso.pcb.datos);
 				//TODO:implementar semaforos
 				agregar_proceso(listaTerminados,proceso);
+				mostrar_lista(listaTerminados);
 				break;
 			}
 		}
@@ -46,4 +59,21 @@ void * PROCER_funcion(){
 	}
 	printf("El PC es %d\n",proceso.pcb.pc);
 	return 0;
+}
+
+//Semaforo auxiliar
+int esperar_a_que_se_llene_procer(nodo_proceso **lista){
+	printf("Entre en esperar en PROCER\n");
+	while( global_procer == 0 ){
+		sleep(1);
+	}
+	return 0;
+}
+void mostrar_datos(data *datos){
+	//Muestro vector
+	int i;
+	for (i = 0; i < 26 ; i++)
+	{
+		printf("El valor de datos[%d] es var:%c valor:%d,\n",i,datos[i].variable,datos[i].valor);
+	}
 }

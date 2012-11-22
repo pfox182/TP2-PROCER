@@ -35,24 +35,21 @@ void planificar(nodo_proceso**);
 nodo_proceso** planificarPorFIFO(nodo_proceso**);
 
 //AUX
-int esperar_a_que_se_llene(nodo_proceso **lista);
-extern int global;
+int esperar_a_que_se_llene_sts(nodo_proceso **lista);
+extern int global_sts;
+extern int global_procer;
 
 void * STS_funcion (){
 	unsigned int prioridad;
 
-	if( esperar_a_que_se_llene(listaProcesosNuevos) == 0){
-		printf("Sali de esperar esperar\n");
+	esperar_a_que_se_llene_sts(listaProcesosNuevos);
+	printf("Sali de esperar esperar en STS\n");
 	//Esto quizas se podria mejorar al ponerlo en una estructura y oredenarla para tener una secuencia de ejecución.
 	for (prioridad = 1; prioridad < 4; ++prioridad) {
 		if(prioridad == lpn){
 			if (listaProcesosNuevos != NULL){
-				printf("Estoy agregando la lista de procesos nuevos a lista de lstos\n");
+				//TODO:Implementar semaforos
 				agregar_lista_de_procesos(listaProcesosListos,listaProcesosNuevos,prioridad);
-				//proceso proceso=sacar_proceso(listaProcesosNuevos);
-				//agregar_proceso(listaProcesosListos,proceso);
-				printf("Sali de agregar proceso\n");
-
 			}
 		}
 		/*if (prioridad == lpr ){
@@ -72,13 +69,12 @@ void * STS_funcion (){
 		}
 		*/
 	}
+	mostrar_lista(listaProcesosListos);
 	printf("Estoy por planificar\n");
-	proceso proceso=sacar_proceso(listaProcesosListos);
-	printf("El proceso de la lista es: pid->%d , pc->%d\n",proceso.pcb.pid,proceso.pcb.pc);
 	planificar(listaProcesosListos);
-	printf("Sali de planificar\n");
-
-	}
+	mostrar_lista(listaProcesosListos);
+	global_sts=0;
+	global_procer=1;
 	return 0;
 }
 
@@ -103,9 +99,12 @@ nodo_proceso** planificarPorFIFO(nodo_proceso **listaAPlanificar){
 	return listaAPlanificar;
 }
 
-int esperar_a_que_se_llene(nodo_proceso **lista){
-	printf("Entre en esperar\n");
-	while( global == 0 ){
+
+
+//Semaforo auxiliar
+int esperar_a_que_se_llene_sts(nodo_proceso **lista){
+	printf("Entre en esperar en STS\n");
+	while( global_sts == 0 ){
 		sleep(1);
 	}
 	return 0;

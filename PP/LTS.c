@@ -22,7 +22,7 @@
 
 //aux
 void mostrar_funciones(stack *pila);
-extern int global;
+extern int global_sts;
 //Prototipos de funcion
 int server_socket(char *puerto);
 proceso crear_proceso(char *buffer);
@@ -191,7 +191,7 @@ int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
 		 proceso = crear_proceso(buffer);
 		 //TODO:implementar semaforos
 		 agregar_proceso(listaProcesosNuevos,proceso);
-		 global=1;
+		 global_sts=1;
 
 		 //TODO: IMPLEMENTAR SEMAFOROS
 		 mps++;
@@ -311,8 +311,8 @@ proceso crear_proceso(char *buffer){
 	pcb.pid = ++pid;
 	pcb.pc = 0;
 
-	pcb.codigo = (char *)malloc(sizeof(buffer));
-	memcpy(pcb.codigo,buffer,sizeof(buffer));
+	pcb.codigo = (char *)malloc(strlen(buffer));
+	memcpy(pcb.codigo,buffer,strlen(buffer));
 
 	pcb.pila= sacar_funciones(buffer);
 	pcb.datos = cargar_datos(buffer);

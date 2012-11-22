@@ -14,6 +14,7 @@
 /*
  * Headers propios
  */
+#include "PP/IOT.h"
 #include "PP/LTS.h"
 #include "PP/PROCER.h"
 #include "PP/STS.h"
@@ -26,7 +27,9 @@
 int cargar_archivo_configuracion();
 
 //aux
-int global=0;
+int global_sts=0;
+int global_procer=0;
+int global_iot=0;
 /*
  * Variables globales
  */
@@ -34,7 +37,7 @@ unsigned int mps=5; //Procesos en el sistema
 unsigned int mpp=5; //Valor de multiprogramacion
 unsigned int max_mps=10; //Maximo de procesos en el sistema
 unsigned int max_mpp=10; //Maximo valor de multiprogramacion
-unsigned int cantidad_hilos_iot=2; //Valor de hilos IOT
+unsigned int cantidad_hilos_iot=1; //Valor de hilos IOT
 unsigned int pid=0;
 char *lpl="FIFO"; //Algoritmo de ordenamiento para lista de procesos listos.
 unsigned int quantum_max=2;
@@ -72,10 +75,12 @@ void sigusr1_handler (int numeroSenial){
 
 int main(int argc, char *argv[])
 {
-   //int i;
+	//aux
+	cant_iot_disponibles=1;
+   int i;
    pthread_t LTS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t STS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
-   //pthread_t PROCER_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
+   pthread_t PROCER_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
 
    cargar_archivo_configuracion();
    printf("mps=%d\n",mps);
@@ -90,15 +95,17 @@ int main(int argc, char *argv[])
    pthread_create(&(STS_hilo), NULL, STS_funcion, NULL); // Creamos el thread STS
 
    printf("Creando hilo de PROCER\n");
-   //pthread_create(&(PROCER_hilo), NULL, PROCER_funcion, NULL); // Creamos el thread PROCER
-   /*
+   pthread_create(&(PROCER_hilo), NULL, PROCER_funcion, NULL); // Creamos el thread PROCER
+
+
    //CREACION DE LOS HILOS IOT
    for (i=0; i < cantidad_hilos_iot; i++){
 	   pthread_t IOT_hilo;
 	   printf("Creando hilo de IOT numero:%d\n", i+1);
-	   pthread_create(&(IOT_hilo), NULL, PROCER_funcion, NULL); // Creamos el thread IOT
+	   pthread_create(&(IOT_hilo), NULL, IOT_funcion, NULL); // Creamos el thread IOT
    }
-	*/
+
+
    //CAPTURAR LA SEÑAL SIGUSR1.
    if (signal(SIGUSR1,sigusr1_handler) == SIG_ERR)
    {
@@ -120,15 +127,25 @@ int cargar_archivo_configuracion(){
 	char *linea;
 	char *valor;
 
-	listaConeccionesDemoradas=(coneccionesDemoradas **)malloc(1);
-	listaProcesosNuevos=(nodo_proceso **)malloc(1);
-	listaProcesosReanudados=(nodo_proceso **)malloc(1);
-	listaProcesosSuspendidos=(nodo_proceso **)malloc(1);
-	listaFinQuantum=(nodo_proceso **)malloc(1);
-	listaFinIO=(nodo_proceso **)malloc(1);
-	listaProcesosListos=(nodo_proceso **)malloc(1);
-	listaBloqueados=(nodo_entrada_salida **)malloc(1);
-	listaTerminados=(nodo_proceso **)malloc(1);
+
+	listaConeccionesDemoradas=(coneccionesDemoradas **)malloc(sizeof(coneccionesDemoradas));
+	bzero(listaConeccionesDemoradas,sizeof(coneccionesDemoradas));
+	listaFinIO=(nodo_proceso **)malloc(sizeof(nodo_proceso));
+	bzero(listaFinIO,sizeof(nodo_proceso));
+	listaProcesosReanudados=(nodo_proceso **)malloc(sizeof(nodo_proceso));
+	bzero(listaProcesosReanudados,sizeof(nodo_proceso));
+	listaProcesosSuspendidos=(nodo_proceso **)malloc(sizeof(nodo_proceso));
+	bzero(listaProcesosSuspendidos,sizeof(nodo_proceso));
+	listaFinQuantum=(nodo_proceso **)malloc(sizeof(nodo_proceso));
+	bzero(listaFinQuantum,sizeof(nodo_proceso));
+	listaProcesosNuevos=(nodo_proceso **)malloc(sizeof(nodo_proceso));
+	bzero(listaProcesosNuevos,sizeof(nodo_proceso));
+	listaProcesosListos=(nodo_proceso **)malloc(sizeof(nodo_proceso));
+	bzero(listaProcesosListos,sizeof(nodo_proceso));
+	listaBloqueados=(nodo_entrada_salida **)malloc(sizeof(nodo_entrada_salida));
+	bzero(listaBloqueados,sizeof(nodo_entrada_salida));
+	listaTerminados=(nodo_proceso **)malloc(sizeof(nodo_proceso));
+	bzero(listaTerminados,sizeof(nodo_proceso));
 
 	while( texto_del_archivo != NULL){
 		linea = strtok(texto_del_archivo,"\n");

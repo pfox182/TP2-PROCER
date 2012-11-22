@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include "proceso.h"
 #include "manejo_listas.h"
+#include <string.h>
 
 
 
@@ -123,25 +124,25 @@ instruccion_io sacar_entrada_salida(nodo_entrada_salida **lista_bloqueados){
 }
 
 void agregar_lista_de_procesos(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,int prioridad){
-
 	proceso proceso;
-	nodo_proceso **listaAgregarAux = listaAgregar;
+	nodo_proceso **listaAux = listaAgregar;
 
-	while (listaAgregarAux != NULL){
-		proceso = sacar_proceso(listaAgregarAux);
+	//TODO:Implementar logs para los cambios de listas
+	while( *listaAux != NULL){
+		proceso = sacar_proceso(listaAux);
 		proceso.prioridad = prioridad;
 		agregar_proceso(listaProcesos,proceso);
-		(*listaAgregarAux) = (*listaAgregarAux)->sig;
 	}
 }
 
 void mostrar_lista(nodo_proceso **listaProcesos){
-	proceso proceso;
-	nodo_proceso **listaAgregarAux = listaProcesos;
+	nodo_proceso **lista=(nodo_proceso **)malloc(sizeof(listaProcesos));
+	memcpy(lista,listaProcesos,sizeof(listaProcesos));
 
-	while (listaAgregarAux != NULL){
-		proceso = sacar_proceso(listaAgregarAux);
-		printf("El proceso de la lista es: pid->%d , pc->%d\n",proceso.pcb.pid,proceso.pcb.pc);
-		(*listaAgregarAux) = (*listaAgregarAux)->sig;
+	while( *lista != NULL){
+		printf("El PID del proceso es: %d\n",(*lista)->proceso.pcb.pid);
+		(*lista)=(*lista)->sig;
 	}
+	free(lista);
+
 }
