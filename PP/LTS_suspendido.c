@@ -5,7 +5,7 @@
  *      Author: utnso
  */
 
-
+/*
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,4 +101,5 @@ void *LTS_suspendido(){
 
 	return 0;
 }
+*/
 

@@ -252,7 +252,7 @@ proceso crear_proceso(char *buffer,int socket){
 
 	proceso.pcb = pcb;
 	proceso.prioridad = 0;
-	proceso.pc_funcion = 0;
+	proceso.pila_ejecucion = (pila_ejecucion **)malloc(sizeof(pila_ejecucion));
 	proceso.cliente_sock = socket;
 	return proceso;
 }

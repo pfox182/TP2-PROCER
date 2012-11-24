@@ -5,6 +5,7 @@
 #include "../FuncionesPropias/manejo_archivos.h"
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_listas.h"
+#include "../Estructuras/manejo_pila_ejecucion.h"
 
 #include "PROCER_funciones.h"
 //AUX
@@ -70,7 +71,7 @@ char * leer_instruccion(char *codigo,unsigned int pc){
 	return instruccion;
 }
 
-int ejecutar_instruccion(char * instruccion,proceso *proceso){
+int ejecutar_instruccion(char * instruccion,proceso *proceso,seccion *seccion_ejecutandose){
 	char *palabra;
 	if(instruccion == NULL){
 		printf("La instruccion es nula en 'ejecutar_instruccion'\n");
@@ -92,11 +93,11 @@ int ejecutar_instruccion(char * instruccion,proceso *proceso){
 		}
 
 		if( es_una_funcion(palabra) == 0){//De la forma f10()
-			ejecutar_funcion(palabra,*proceso);
+			ejecutar_funcion(palabra,proceso);
 		}
 
 		if( es_un_salto(palabra) == 0){//De la forma snc o ssc
-			ejecutar_salto(palabra,resto,&((*proceso).pcb));//Le tengo que pasar la instruccion ej: snc b inicio_for
+			ejecutar_salto(palabra,resto,(*proceso).pcb,seccion_ejecutandose);//Le tengo que pasar la instruccion ej: snc b inicio_for
 			break;
 		}
 
@@ -117,7 +118,7 @@ int ejecutar_instruccion(char * instruccion,proceso *proceso){
 }
 
 int  es_un_token_nulo(char *palabra){
-	if( strcmp("variables",palabra)==0 || strcmp("comienzo_programa",palabra)==0 || strcmp("",palabra)==0 ){
+	if( strcmp("fin_funcion",palabra)==0 || strcmp("variables",palabra)==0 || strcmp("comienzo_programa",palabra)==0 || strcmp("",palabra)==0 ) {
 		return 0;
 	}
 
@@ -176,37 +177,48 @@ int es_un_io(char* palabra){
 }
 
 
-int ejecutar_funcion(char *nombre_funcion,proceso proceso){
+int ejecutar_funcion(char *nombre_funcion,proceso *proceso){
 	nombre_funcion=strtok(nombre_funcion,"()");
 
-	unsigned int posicion = buscar_inicio_de_funcion(nombre_funcion,proceso.pcb.codigo);
-	char *instruccion;
+	unsigned int posicion = buscar_inicio_de_funcion(nombre_funcion,(*proceso).pcb.codigo);
+	//char *instruccion;
 	char fin_funcion[30];
+	bzero(fin_funcion,strlen(fin_funcion));
 	strcpy(fin_funcion,"fin_funcion ");
 	strcat(fin_funcion,nombre_funcion);
+	unsigned int *cont_funcion=(unsigned int *)malloc(sizeof(unsigned int));
+	*cont_funcion=posicion;
+	seccion aux;
+	aux.nombre_seccion=(char *)malloc(strlen(fin_funcion));
+	bzero(aux.nombre_seccion,strlen(fin_funcion));
+	strcpy(aux.nombre_seccion,fin_funcion);
+	aux.contador_instruccion=cont_funcion;
+
+	agregar_a_pila_ejecucion(aux,(*proceso).pila_ejecucion);
+	printf("Se agrego la seccion: %s con el contador=%d\n",fin_funcion,posicion);
 
 	//TODO:Se debe contar como 1 quantum por toda la funcion o 1 quantum x cada instruccion??
 	//TODO:Que asa si se suspende el programa aca
-	instruccion = leer_instruccion(proceso.pcb.codigo,posicion);
-	if( instruccion == NULL){
-		printf("La instruccion leida de la funcion %s en la linea %d es nula\n",nombre_funcion,posicion);
-		return -1;
-	}
-	printf("Antes del while, la instruccion %s, en la posicion %d\n ",instruccion,posicion);
-	while( strcmp(instruccion,fin_funcion) != 0 ){
-		if( instruccion != NULL ){
-			printf("La instruccion de la funcion %s, a ejecutar es %s, en la posicion %d\n",nombre_funcion,instruccion,posicion);
-			if( ejecutar_instruccion(instruccion,&proceso) == -1){
-				printf("Error al ejecutar la instruccion:%s ,de la funcion %s\n",instruccion,nombre_funcion);
-				return -1;
-			}
-		}else{
-			printf("La instruccion leida de la funcion %s en la linea %d es nula\n",nombre_funcion,posicion);
-			return -1;
-		}
-		posicion++;
-		instruccion = leer_instruccion(proceso.pcb.codigo,posicion);
-	}
+//	instruccion = leer_instruccion(proceso.pcb.codigo,posicion);
+//	if( instruccion == NULL){
+//		printf("La instruccion leida de la funcion %s en la linea %d es nula\n",nombre_funcion,posicion);
+//		return -1;
+//	}
+//	printf("Antes del while, la instruccion %s, en la posicion %d\n ",instruccion,posicion);
+//	while( strcmp(instruccion,fin_funcion) != 0 ){
+//		if( instruccion != NULL ){
+//			printf("La instruccion de la funcion %s, a ejecutar es %s, en la posicion %d\n",nombre_funcion,instruccion,posicion);
+//			if( ejecutar_instruccion(instruccion,&proceso) == -1){
+//				printf("Error al ejecutar la instruccion:%s ,de la funcion %s\n",instruccion,nombre_funcion);
+//				return -1;
+//			}
+//		}else{
+//			printf("La instruccion leida de la funcion %s en la linea %d es nula\n",nombre_funcion,posicion);
+//			return -1;
+//		}
+//		posicion++;
+//		instruccion = leer_instruccion(proceso.pcb.codigo,posicion);
+//	}
 
 	return 0;
 }
@@ -395,7 +407,7 @@ int es_un_delimitador(char caracter){
 	return -1;
 }
 
-int ejecutar_salto(char *tipo_de_salto,char *resto,pcb *pcb){
+int ejecutar_salto(char *tipo_de_salto,char *resto,pcb pcb,seccion *seccion_ejecutandose){
 	char variable,*etiqueta;
 	int valor_de_variable,posicion_etiqueta;
 
@@ -405,14 +417,14 @@ int ejecutar_salto(char *tipo_de_salto,char *resto,pcb *pcb){
 	resto++;
 	etiqueta=resto;
 	printf("Los valores extraidos del salto son: %s ,%c y %s \n",tipo_de_salto,variable,etiqueta);
-	valor_de_variable=buscar_valor_de_variable(variable,(*pcb).datos);
+	valor_de_variable=buscar_valor_de_variable(variable,pcb.datos);
 
 	if(strcmp(tipo_de_salto,"ssc")==0){
 		if( valor_de_variable == 0){
-			posicion_etiqueta=buscar_posicion_etiqueta(etiqueta,(*pcb).codigo);
+			posicion_etiqueta=buscar_posicion_etiqueta(etiqueta,pcb.codigo);
 			printf("Sali de la funcion\n");
 			if( posicion_etiqueta != -1){
-				(*pcb).pc=posicion_etiqueta;
+				*seccion_ejecutandose->contador_instruccion=posicion_etiqueta;
 				printf("La posicion de la etiqueta es %d\n",posicion_etiqueta);
 			}else{
 				printf("La posicion de la etiqueta es %d\n",posicion_etiqueta);
@@ -422,10 +434,10 @@ int ejecutar_salto(char *tipo_de_salto,char *resto,pcb *pcb){
 		}
 	}else{
 		if( valor_de_variable != 0){
-			posicion_etiqueta=buscar_posicion_etiqueta(etiqueta,(*pcb).codigo);
+			posicion_etiqueta=buscar_posicion_etiqueta(etiqueta,pcb.codigo);
 			if( posicion_etiqueta != -1){
-				(*pcb).pc=posicion_etiqueta;
-				printf("El valor es distinto de 0, se deberia saltar a la linea %d, la proxima instruccion es %d\n",posicion_etiqueta,(*pcb).pc);
+				*seccion_ejecutandose->contador_instruccion=posicion_etiqueta;
+				printf("El valor es distinto de 0, se deberia saltar a la linea %d, la proxima instruccion es %d\n",posicion_etiqueta,*seccion_ejecutandose->contador_instruccion);
 			}else{
 				return -1;
 			}
@@ -519,4 +531,3 @@ int ejecutar_io(char *palabra,proceso proceso){
 
 	return 0;
 }
-

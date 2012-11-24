@@ -29,11 +29,21 @@ struct pcb{
 	char *codigo;
 }typedef pcb;
 
+struct seccion{
+	char *nombre_seccion;//programa,f1,f2,f3,etc
+	unsigned int *contador_instruccion;//program_counter,function_counter
+}typedef seccion;
+
+struct pila_ejecucion{
+	seccion seccion;
+	struct pila_ejecucion *siguiente;
+}typedef pila_ejecucion;
+
 struct proceso{
 	pcb pcb;
 	int prioridad;
 	int cliente_sock;
-	unsigned int pc_funcion;
+	pila_ejecucion **pila_ejecucion;
 }typedef proceso;
 
 struct nodo_proceso{
@@ -51,4 +61,8 @@ struct nodo_entrada_salida{
 	instruccion_io instruccion;
 	struct nodo_entrada_salida *sig;
 } typedef nodo_entrada_salida;
+
+
 #endif /* PROCESO_H_ */
+
+
