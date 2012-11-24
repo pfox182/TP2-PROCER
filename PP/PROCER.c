@@ -1,15 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h> //Contiene la funcion sleep
 #include "../FuncionesPropias/manejo_archivos.h"
 #include "../Estructuras/proceso.h"
 
 #include "PROCER_funciones.h"
 
+//Prototipos
+
+
+//Variables globales PROCER
+extern int suspendido;
+
 //Listas globales
 extern nodo_proceso **listaProcesosListos;
 extern nodo_proceso **listaTerminados;
+extern nodo_proceso **listaProcesosSuspendidos;
 
 //AUX
 extern int global_procer;
@@ -32,6 +40,14 @@ void * PROCER_funcion(){
 	int retorno;
 
 	while( verificar_fin_ejecucion(proceso,cont_quantum,cant_instrucciones) != -1){
+
+
+	   if( suspendido == 1){
+		   printf("Agregue el proceso %d a Suspendidos\n",proceso.pcb.pid);
+		   agregar_proceso(listaProcesosSuspendidos,proceso);
+		   return 0; //TODO:hay que ver si va return
+	   }
+
 		printf("El PC es %d\n",proceso.pcb.pc);
 		//Leemos la siguiente instruccion a ejecutar
 		instruccion = leer_instruccion(proceso.pcb.codigo,proceso.pcb.pc);
@@ -61,6 +77,12 @@ void * PROCER_funcion(){
 	return 0;
 }
 
+// FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.
+void  SIGhandler(int sig)
+{
+	suspendido = 1;
+	printf("\nReceived a SIGUSR1.\n");
+}
 //Semaforo auxiliar
 int esperar_a_que_se_llene_procer(nodo_proceso **lista){
 	printf("Entre en esperar en PROCER\n");

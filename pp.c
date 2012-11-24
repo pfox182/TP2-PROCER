@@ -5,11 +5,11 @@
  *      Author: utnso
  */
 #include <unistd.h>
-#include <signal.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 /*
  * Headers propios
@@ -25,7 +25,7 @@
  * Prototipos
  */
 int cargar_archivo_configuracion();
-
+void  SIGhandler(int sig);
 //aux
 int global_sts=0;
 int global_procer=0;
@@ -33,6 +33,7 @@ int global_iot=0;
 /*
  * Variables globales
  */
+int suspendido=0;
 unsigned int mps=5; //Procesos en el sistema
 unsigned int mpp=5; //Valor de multiprogramacion
 unsigned int max_mps=10; //Maximo de procesos en el sistema
@@ -41,7 +42,7 @@ unsigned int cantidad_hilos_iot=1; //Valor de hilos IOT
 unsigned int pid=0;
 char *lpl="FIFO"; //Algoritmo de ordenamiento para lista de procesos listos.
 unsigned int quantum_max=2;
-char *espera_estandar="2";
+char *espera_estandar="60";
 char *espera_estandar_io="1";
 int cant_iot_disponibles;
 
@@ -63,14 +64,7 @@ nodo_proceso **listaTerminados;
 coneccionesDemoradas **listaConeccionesDemoradas;
 
 
-// FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.
-void sigusr1_handler (int numeroSenial){
-	//TODO Suspender el proceso PROCER.
-	printf("Capture la senial SIGUSR1");
-	/* Se pone controlador por defecto para SIGUSR1 */
-	signal (SIGUSR1, SIG_DFL);
-}
-
+void  SIGhandler(int);
 
 
 int main(int argc, char *argv[])
@@ -81,6 +75,7 @@ int main(int argc, char *argv[])
    pthread_t LTS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t STS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t PROCER_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
+
 
    cargar_archivo_configuracion();
    printf("mps=%d\n",mps);
@@ -105,17 +100,11 @@ int main(int argc, char *argv[])
 	   pthread_create(&(IOT_hilo), NULL, IOT_funcion, NULL); // Creamos el thread IOT
    }
 
-
    //CAPTURAR LA SEÑAL SIGUSR1.
-   if (signal(SIGUSR1,sigusr1_handler) == SIG_ERR)
-   {
-	   perror("ERROR No se puede cambiar signal");
-   }
-
-   	/* Bucle infinito de espera.
-   	 * pause() deja el proceso dormido hasta que llegue una señal. */
-    while (1)
-   		pause();
+   	   while (1){
+   			signal(SIGUSR1, SIGhandler);
+   		sleep(1);
+   		}
 
    pthread_exit(NULL);// Última función que debe ejecutar el main() siempre
    return 0;
@@ -174,6 +163,13 @@ int cargar_archivo_configuracion(){
 			}
 		}
 
+		// FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.
+		void  SIGhandler(int sig)
+		{
+			suspendido = 1;
+			printf("\nReceived a SIGUSR1.\n");
+		}
+
 		if( strstr(linea,"quantum_max")){
 			valor = strtok(linea," ");
 			valor = strtok(NULL,";");
@@ -193,6 +189,5 @@ int cargar_archivo_configuracion(){
 
 	return 0;
 }
-
 
 

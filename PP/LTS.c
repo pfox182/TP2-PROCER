@@ -17,24 +17,22 @@
 #include "../Estructuras/manejo_listas.h"
 #include "../Estructuras/colaConeccionesDemoradas.h"
 #include "../Estructuras/manejo_listas_funciones.h"
-
-#define BUFFER_SIZE 1024
+#include "../Estructuras/manejo_mensajes.h"
 
 //aux
 void mostrar_funciones(stack *pila);
 extern int global_sts;
+
 //Prototipos de funcion
 int server_socket(char *puerto);
-proceso crear_proceso(char *buffer);
+proceso crear_proceso(char *buffer,int socket);
 data* cargar_datos(char *buffer);
 void error(const char *msg);
 stack* sacar_funciones(char *buffer);
 int notifica_sobrepaso_mps(int cliente_sock);
 int notificar_demora_mpp(int cliente_sock);
-int administrar_conexion(int cliente_sock,fd_set *master,char *buffer);
+int administrar_conexion(int cliente_sock,fd_set *master);
 int validar_mps_mpp(int cliente_sock);
-int recibir_codigo(int cliente_sock,fd_set *master,char *buffer);
-int recvall(int client_fd,char *buffer,int *header,int flag);
 //Variables globales
 extern unsigned int mps,mpp,max_mps,max_mpp; //Se usa extern para indicar que son variables globales de otro archivo
 extern unsigned int pid;
@@ -76,7 +74,6 @@ int server_socket(char *puerto)
 		FD_ZERO(&master);//Borra los conjuntos maestro y temporal
 		FD_ZERO(&read_fds);
 		int cliente_sock;//Representan descriptores en un for
-		char *buffer=(char *)malloc(BUFFER_SIZE);
 
      int portno;
      socklen_t clilen;
@@ -143,7 +140,7 @@ int server_socket(char *puerto)
 				  }
     	      }else{
     				 //Se establecio la coneccion con un proceso PI
-    	    	  	 administrar_conexion(cliente_sock,&master,buffer);
+    	    	  	 administrar_conexion(cliente_sock,&master);
     			 }
     		 }
     	}
@@ -157,26 +154,28 @@ int server_socket(char *puerto)
  a lo procedimintos para crear el proceso y realiza las
  encolaciones necesarias.
  ****************************************/
-int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
+int administrar_conexion(int cliente_sock,fd_set *master){
+	char *buffer=(char *)malloc(1);
 	proceso proceso;
 
 	printf("Entre a administrar conexion\n");
 
-	int socket_demorado=sacar_conexion_demorada(listaConeccionesDemoradas);
-	printf("Pase la obtencio de socker demorado, que es %d\n",socket_demorado);
-	if( socket_demorado > 0 && validar_mps_mpp(socket_demorado)==0){
-		printf("Entre a socket demorado\n");
-		if(recibir_codigo(socket_demorado,master,buffer) == 0){
+	int socket_demorado;
+	if((socket_demorado=sacar_conexion_demorada(listaConeccionesDemoradas))>0){
+		printf("Pase la obtencio de socker demorado, que es %d\n",socket_demorado);
+		if( validar_mps_mpp(socket_demorado)==0){
+			printf("El sokcet demorado es %d\n",socket_demorado);
+			printf("Entre a socket demorado\n");
+			recibir_mensaje(buffer,socket_demorado);
 			printf("Recibi el codigo del socket demorado\n");
-			proceso = crear_proceso(buffer);
+			proceso = crear_proceso(buffer,cliente_sock);
 			//TODO:implementar semaforos
 			agregar_proceso(listaProcesosNuevos,proceso);
 			 //TODO: IMPLEMENTAR SEMAFOROS
 			 mps++;
 			 mpp++;
-		}
-	}else{
-		if( socket_demorado >0 ){
+			 FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
+		}else{
 			printf("Volvi a encolar el socket demorado\n");
 			encolar_primero(listaConeccionesDemoradas,socket_demorado);
 		}
@@ -185,10 +184,13 @@ int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
 	printf("Pase la parte de socket demorado\n");
 
 	 if(validar_mps_mpp(cliente_sock)==0 ){
-		 if(recibir_codigo(cliente_sock,master,buffer) == 0){
+		 //if(recibir_codigo(cliente_sock,master,buffer) == 0){
+		 if(recibir_mensaje(buffer,cliente_sock) == 0){
 		 printf("Recibi el codigo del proceso nuevo, que es: %s\n",buffer);
+		 //enviar_mensaje("Todo okey",cliente_sock);
+		 printf("El socket del cliente es %d\n",cliente_sock);
 		 //Creamos el proceso
-		 proceso = crear_proceso(buffer);
+		 proceso = crear_proceso(buffer,cliente_sock);
 		 //TODO:implementar semaforos
 		 agregar_proceso(listaProcesosNuevos,proceso);
 		 global_sts=1;
@@ -208,8 +210,6 @@ int administrar_conexion(int cliente_sock,fd_set *master,char *buffer){
 		 	mostrar_funciones(proceso.pcb.pila);
 		 printf("\tPrioridad:%d\n",proceso.prioridad);
 
-
-		 close(cliente_sock);
 		 FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
 	 }
 	 }
@@ -221,7 +221,7 @@ int validar_mps_mpp(int cliente_sock){
 		if( mps >= max_mps){
 			//notifica_sobrepaso_mps(cliente_sock);
 			printf("Sobrepaso de mps\n");
-			close(cliente_sock);
+			//close(cliente_sock);
 			return -1;
 		}else{
 			//notificar_demora_mpp(cliente_sock);
@@ -233,77 +233,8 @@ int validar_mps_mpp(int cliente_sock){
 	printf("mps y mpp ok\n");
 	return 0;
 }
-int recibir_codigo(int cliente_sock,fd_set *master,char *buffer){
-	int nbytes;
-	int header;
 
-	printf("Entre en recibir codigo\n");
-	//Recibimos el header del PI
-	 if( (nbytes = recv(cliente_sock,&header,sizeof(header),0)) <= 0){
-		 //Error o conexion cerrada por el cliente
-		 if( nbytes == 0){
-			 //Conexion cerrada
-			 printf("El socket %d cerro la conexion\n",cliente_sock);
-			 return -1;
-		 }else{
-			 error("Error al recibir datos del header");
-			 return -1;
-		 }
-		 //close(cliente_sock);
-		 //FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
-	 }
-
-	 printf("El header recibido es: %d \n",header);
-
-	 if (( recvall(cliente_sock,buffer,&header,0)) == -1){
-		 error("Error al recibir datos del archivo");
-		 return -1;
-	 }
-
-	 //Enviar confirmacion de que se recibio algo
-	 char *msj="Recivi el mensaje";
-	 if( (nbytes=send(cliente_sock,msj,strlen(msj),0)) <= 0){
-		 if(nbytes == 0){
-			 printf("El cliente %i cerro la conexion y no se envio msj de confirmacion.\n",cliente_sock);
-			 return -1;
-		 }else{
-			 error("Error al enviar confirmacion");
-			 return -1;
-		 }
-	 }
-	 return 0;
-}
-
-/******* recvall() *********************
-Se encarga de recibir una cantidad de bytes dados(header).
- ****************************************/
-int recvall(int client_fd,char *buffer,int *header,int flag){
-
-	int total=0;//Los bytes que recibimos hasta ahora
-	int bytes_left=*header;//Los bytes que faltan recibir
-	int nbytes = 0;
-
-	//Valido que halla suficiente espacio
-	if( sizeof(buffer) < bytes_left){
-		free(buffer);
-		buffer=(char *)malloc(bytes_left+1);
-	}
-
-	while( total < *header){
-		nbytes = recv(client_fd,buffer+total, bytes_left,flag);
-		if( nbytes == -1){break;}
-		total =+ nbytes;
-		bytes_left =- nbytes;
-	}
-
-	*header = total;//Cantidad de paquetes recibidos en realidad
-
-	return nbytes==-1?-1:0;
-	return 0;
-}
-
-
-proceso crear_proceso(char *buffer){
+proceso crear_proceso(char *buffer,int socket){
 	proceso proceso;
 	pcb pcb;
 
@@ -321,6 +252,8 @@ proceso crear_proceso(char *buffer){
 
 	proceso.pcb = pcb;
 	proceso.prioridad = 0;
+	proceso.pc_funcion = 0;
+	proceso.cliente_sock = socket;
 	return proceso;
 }
 

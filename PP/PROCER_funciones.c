@@ -299,6 +299,7 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 	asignar_valor(variable,valor_total,pcb.datos);
 	if( se_espero == 'n'){//Solo se espera si no se espero en ';'
 		sleep(atoi(espera_estandar));
+		//sleep(30);
 	}
 	return 0;
 
