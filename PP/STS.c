@@ -33,6 +33,10 @@ extern unsigned int finIO;
 //Prototipos
 void planificar(nodo_proceso**);
 nodo_proceso** planificarPorFIFO(nodo_proceso**);
+nodo_proceso* planificarPorPRI(nodo_proceso **listaAPlanificar);
+nodo_proceso *ordenaPorPrioridad(nodo_proceso *listaAPlanificar, int n);
+int cantidad_nodos(nodo_proceso **listaAPlanificar);
+nodo_proceso** planificarPorRR(nodo_proceso **listaAPlanificar);
 
 //AUX
 int esperar_a_que_se_llene_sts(nodo_proceso **lista);
@@ -44,7 +48,7 @@ void * STS_funcion (){
 
 	esperar_a_que_se_llene_sts(listaProcesosNuevos);
 	printf("Sali de esperar esperar en STS\n");
-	//Esto quizas se podria mejorar al ponerlo en una estructura y oredenarla para tener una secuencia de ejecución.
+	//TODO: la prioridad maxima debe ser variable.
 	for (prioridad = 1; prioridad < 4; ++prioridad) {
 		if(prioridad == lpn){
 			if (listaProcesosNuevos != NULL){
@@ -85,10 +89,10 @@ void planificar(nodo_proceso **listaAPlanificar){
 		planificarPorFIFO(listaAPlanificar);
 	}
 	if ( strcmp(lpl,"RR")) {
-		  // TODO: Llamar a la funcion correspondiente a este algoritmo
+		planificarPorRR(listaAPlanificar);
 	}
 	if ( strcmp(lpl,"PRI") ) {
-		// TODO: Llamar a la funcion correspondiente a este algoritmo
+		planificarPorPRI(listaAPlanificar);
 	}
 	if ( strcmp(lpl,"SPN") ) {
 		// TODO: Llamar a la funcion correspondiente a este algoritmo
@@ -99,7 +103,60 @@ nodo_proceso** planificarPorFIFO(nodo_proceso **listaAPlanificar){
 	return listaAPlanificar;
 }
 
+nodo_proceso** planificarPorRR(nodo_proceso **listaAPlanificar){
+	return listaAPlanificar;
+}
 
+nodo_proceso *planificarPorPRI(nodo_proceso **listaAPlanificar){
+	return ordenaPorPrioridad(*listaAPlanificar,cantidad_nodos(listaAPlanificar));
+}
+
+nodo_proceso *ordenaPorPrioridad(nodo_proceso *listaAPlanificar, int n) {
+	nodo_proceso *aux=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *siguiente=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *anterior=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	int j=1;
+	int i;
+
+	for(i=1;i<n;i++){
+		aux = listaAPlanificar;
+		anterior=NULL;
+		j=1;
+		while(j<=(n-i)){
+			siguiente=aux->sig;
+			if (aux->proceso.prioridad > siguiente->proceso.prioridad){
+				aux->sig = siguiente->sig;
+				siguiente->sig =aux;
+				if (anterior !=NULL){
+					anterior->sig=siguiente;
+					anterior=siguiente;
+				} else {
+					listaAPlanificar=siguiente;
+					anterior = listaAPlanificar;
+				}
+				aux=anterior->sig;
+			} else {
+				anterior=aux;
+				aux=siguiente;
+			}
+			j++;
+		}
+	}
+	return listaAPlanificar;
+}
+
+int cantidad_nodos(nodo_proceso **listaAPlanificar){
+	int cant_nodos=0;
+	nodo_proceso **aux=(nodo_proceso **)malloc(sizeof(listaAPlanificar));
+	memcpy(aux,listaAPlanificar,sizeof(listaAPlanificar));
+
+	while (*aux != NULL){
+		cant_nodos++;
+		(*aux) =(*aux)->sig;
+	}
+	free(aux);
+	return cant_nodos;
+}
 
 //Semaforo auxiliar
 int esperar_a_que_se_llene_sts(nodo_proceso **lista){
