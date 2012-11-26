@@ -12,16 +12,18 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_listas.h"
 #include "../Estructuras/colaConeccionesDemoradas.h"
 #include "../Estructuras/manejo_listas_funciones.h"
 #include "../Estructuras/manejo_mensajes.h"
+#include "../Estructuras/manejo_semaforos.h"
+#include "LTS_suspendido.h"
 
 //aux
 void mostrar_funciones(stack *pila);
-extern int global_sts;
 
 //Prototipos de funcion
 int server_socket(char *puerto);
@@ -29,29 +31,30 @@ proceso crear_proceso(char *buffer,int socket);
 data* cargar_datos(char *buffer);
 void error(const char *msg);
 stack* sacar_funciones(char *buffer);
-int notifica_sobrepaso_mps(int cliente_sock);
-int notificar_demora_mpp(int cliente_sock);
 int administrar_conexion(int cliente_sock,fd_set *master);
-int validar_mps_mpp(int cliente_sock);
+int validar_mps_mmp(int cliente_sock);
 //Variables globales
-extern unsigned int mps,mpp,max_mps,max_mpp; //Se usa extern para indicar que son variables globales de otro archivo
+extern unsigned int mps,mmp,max_mps,max_mmp; //Se usa extern para indicar que son variables globales de otro archivo
 extern unsigned int pid;
+extern int semaforos;
 
 //Listas
 extern nodo_proceso **listaProcesosNuevos;
-extern nodo_proceso **listaProcesosReanudados;
-extern nodo_proceso **listaProcesosSuspendidos;
 extern coneccionesDemoradas **listaConeccionesDemoradas;
-extern nodo_proceso **listaTerminados;
-
 
 void * LTS_funcion(void * var){
-
+	pthread_t LTS_suspendido_hilo;
 	char *puerto="4545";
 
-	printf("Soy el hilo de LTS levantando el server.\n");
+	printf("Creando hilo de LTS\n");
+
+
+	pthread_create(&(LTS_suspendido_hilo), NULL, LTS_suspendido, NULL); // Creamos el thread LTS suspendido
+	printf("Soy el hilo de LTS_suspendido.\n");
+
 	server_socket(puerto);
 
+	//pthread_exit(NULL);// Última función que debe ejecutar el main() siempre
 	return 0;
 }
 
@@ -150,87 +153,95 @@ int server_socket(char *puerto)
 }
 
 /******* administrar_conexion() *********************
- Realiza todos los procesos de validacion de mpp y mps, llama
+ Realiza todos los procesos de validacion de mmp y mps, llama
  a lo procedimintos para crear el proceso y realiza las
  encolaciones necesarias.
  ****************************************/
 int administrar_conexion(int cliente_sock,fd_set *master){
+	int retorno;
 	char *buffer=(char *)malloc(1);
 	proceso proceso;
 
 	printf("Entre a administrar conexion\n");
-
 	int socket_demorado;
 	if((socket_demorado=sacar_conexion_demorada(listaConeccionesDemoradas))>0){
 		printf("Pase la obtencio de socker demorado, que es %d\n",socket_demorado);
-		if( validar_mps_mpp(socket_demorado)==0){
+		if( (retorno =validar_mps_mmp(socket_demorado)) == 0){
 			printf("El sokcet demorado es %d\n",socket_demorado);
-			printf("Entre a socket demorado\n");
 			recibir_mensaje(buffer,socket_demorado);
 			printf("Recibi el codigo del socket demorado\n");
-			proceso = crear_proceso(buffer,cliente_sock);
+			proceso = crear_proceso(buffer,socket_demorado);
 			//TODO:implementar semaforos
 			agregar_proceso(listaProcesosNuevos,proceso);
 			 //TODO: IMPLEMENTAR SEMAFOROS
 			 mps++;
-			 mpp++;
-			 FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
+			 mmp++;
 		}else{
-			printf("Volvi a encolar el socket demorado\n");
-			encolar_primero(listaConeccionesDemoradas,socket_demorado);
+			if( retorno == 1){
+				printf("Volvi a encolar el socket demorado\n");
+				encolar_primero(listaConeccionesDemoradas,socket_demorado);
+			}else{
+				printf("Se produjo un error al validar el mmp y mps.\n");
+			}
 		}
+		FD_CLR(socket_demorado,&(*master));
 	}
 
 	printf("Pase la parte de socket demorado\n");
-
-	 if(validar_mps_mpp(cliente_sock)==0 ){
-		 //if(recibir_codigo(cliente_sock,master,buffer) == 0){
-		 if(recibir_mensaje(buffer,cliente_sock) == 0){
+	// if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
+	if(recibir_mensaje(buffer,cliente_sock) == 0){
 		 printf("Recibi el codigo del proceso nuevo, que es: %s\n",buffer);
-		 //enviar_mensaje("Todo okey",cliente_sock);
 		 printf("El socket del cliente es %d\n",cliente_sock);
 		 //Creamos el proceso
 		 proceso = crear_proceso(buffer,cliente_sock);
-		 //TODO:implementar semaforos
-		 agregar_proceso(listaProcesosNuevos,proceso);
-		 global_sts=1;
+		if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
+			 //TODO:implementar semaforos
+			 esperar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+			 agregar_proceso(listaProcesosNuevos,proceso);
+			 liberar_semaforo(semaforos,0);
 
-		 //TODO: IMPLEMENTAR SEMAFOROS
-		 mps++;
-		 mpp++;
+			 //TODO: IMPLEMENTAR SEMAFOROS
+			 mps++;
+			 mmp++;
 
-		 printf("El proceso creado fue:\n");
-		 	printf("\tPID:%d\n",proceso.pcb.pid);
-		 	printf("\tPC:%d\n",proceso.pcb.pc);
-		 	printf("\tDatos:\n");
-		 	int i;
-		 	for( i=0;i<26;i++){
-		 		printf("\t variable: %c valor:%d\n",proceso.pcb.datos[i].variable,proceso.pcb.datos[i].valor);
-		 	}
-		 	mostrar_funciones(proceso.pcb.pila);
-		 printf("\tPrioridad:%d\n",proceso.prioridad);
+			 printf("El proceso creado fue:\n");
+				printf("\tPID:%d\n",proceso.pcb.pid);
+				printf("\tPC:%d\n",proceso.pcb.pc);
+				printf("\tDatos:\n");
+				int i;
+				for( i=0;i<26;i++){
+					printf("\t variable: %c valor:%d\n",proceso.pcb.datos[i].variable,proceso.pcb.datos[i].valor);
+				}
+				mostrar_funciones(proceso.pcb.pila);
+			 printf("\tPrioridad:%d\n",proceso.prioridad);
 
-		 FD_CLR(cliente_sock,&(*master));//Elimiar del conjunto maestro
+		 }else{
+			 //bzero(buffer,strlen(buffer));
+			 if( retorno == -1){
+				printf("Se produjo un error al validar el mmp y mps.\n");
+			}
+		 }
 	 }
-	 }
+	 FD_CLR(cliente_sock,&(*master));
 	 return 0;
 }
-int validar_mps_mpp(int cliente_sock){
+int validar_mps_mmp(int cliente_sock){
+
 	//TODO:implementar semaforos
-	if( mps >= max_mps || mpp >= max_mpp){//Si no entra al if => todo. ok
+	if( mps >= max_mps || mmp >= max_mmp){//Si no entra al if => todo. ok
 		if( mps >= max_mps){
-			//notifica_sobrepaso_mps(cliente_sock);
+			enviar_mensaje("Se sobrepaso el maximo de prosesos en el sistema(mps).\n",cliente_sock);
 			printf("Sobrepaso de mps\n");
-			//close(cliente_sock);
-			return -1;
+			close(cliente_sock);
+			return 1;
 		}else{
-			//notificar_demora_mpp(cliente_sock);
-			printf("Sobrepaso de mpp\n");
+			enviar_mensaje("Se sobrepaso el maximo de multiprogramacion(mmp), se encolara su solicitud.\n",cliente_sock);
+			printf("Sobrepaso de mmp\n");
 			encolar_solicitud(listaConeccionesDemoradas,cliente_sock);
-			return -1;
+			return 1;
 		}
 	}
-	printf("mps y mpp ok\n");
+	printf("mps y mmp ok\n");
 	return 0;
 }
 
@@ -339,16 +350,6 @@ stack* sacar_funciones(char *buffer){
 	resto=NULL;
 	free(resto);
 	return *lista_funciones;
-}
-
-int notifica_sobrepaso_mps(int cliente_sock){
-	//TODO:IMPLEMENTAR
-	return 0;
-}
-
-int notificar_demora_mpp(int cliente_sock){
-	//TODO:IMPLEMENTAR
-	return 0;
 }
 
 /******* error() *********************

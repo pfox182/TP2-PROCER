@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/sem.h>
+#include "Estructuras/manejo_semaforos.h"
 
 /*
  * Headers propios
@@ -30,14 +32,17 @@ void  SIGhandler(int sig);
 int global_sts=0;
 int global_procer=0;
 int global_iot=0;
+//SEMAFOROS *************************************
+int semaforos;
+//***************************
 /*
  * Variables globales
  */
 int suspendido=0;
-unsigned int mps=5; //Procesos en el sistema
-unsigned int mpp=5; //Valor de multiprogramacion
+unsigned int mps; //Procesos en el sistema
+unsigned int mmp; //Valor de multiprogramacion
 unsigned int max_mps=10; //Maximo de procesos en el sistema
-unsigned int max_mpp=10; //Maximo valor de multiprogramacion
+unsigned int max_mmp=10; //Maximo valor de multiprogramacion
 unsigned int cantidad_hilos_iot=1; //Valor de hilos IOT
 unsigned int pid=0;
 char *lpl="FIFO"; //Algoritmo de ordenamiento para lista de procesos listos.
@@ -60,7 +65,6 @@ nodo_proceso **listaFinQuantum;
 nodo_proceso **listaFinIO;
 nodo_proceso **listaProcesosListos;
 nodo_entrada_salida  **listaBloqueados;
-nodo_proceso **listaTerminados;
 coneccionesDemoradas **listaConeccionesDemoradas;
 
 
@@ -76,10 +80,11 @@ int main(int argc, char *argv[])
    pthread_t STS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t PROCER_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
 
+   semaforos=inicializar_semaforos(1);
 
    cargar_archivo_configuracion();
    printf("mps=%d\n",mps);
-   printf("mpp=%d\n",mpp);
+   printf("mpp=%d\n",mmp);
    //CREACION DE LOS HILOS DEL PP.
    //TODO agregar validaciones a los hilos.
 
@@ -133,8 +138,6 @@ int cargar_archivo_configuracion(){
 	bzero(listaProcesosListos,sizeof(nodo_proceso));
 	listaBloqueados=(nodo_entrada_salida **)malloc(sizeof(nodo_entrada_salida));
 	bzero(listaBloqueados,sizeof(nodo_entrada_salida));
-	listaTerminados=(nodo_proceso **)malloc(sizeof(nodo_proceso));
-	bzero(listaTerminados,sizeof(nodo_proceso));
 
 	while( texto_del_archivo != NULL){
 		linea = strtok(texto_del_archivo,"\n");
@@ -151,7 +154,7 @@ int cargar_archivo_configuracion(){
 			valor = strtok(linea," ");
 			valor = strtok(NULL,";");
 			if( valor != NULL ){
-				mpp=atoi(valor);
+				mmp=atoi(valor);
 			}
 		}
 
@@ -161,13 +164,6 @@ int cargar_archivo_configuracion(){
 			if( valor != NULL ){
 				lpl=valor;
 			}
-		}
-
-		// FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.
-		void  SIGhandler(int sig)
-		{
-			suspendido = 1;
-			printf("\nReceived a SIGUSR1.\n");
 		}
 
 		if( strstr(linea,"quantum_max")){
@@ -190,4 +186,10 @@ int cargar_archivo_configuracion(){
 	return 0;
 }
 
+// FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.
+void  SIGhandler(int sig)
+{
+	suspendido = 1;
+	printf("\nReceived a SIGUSR1.\n");
+}
 

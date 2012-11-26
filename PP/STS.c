@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_listas.h"
+#include "../Estructuras/manejo_semaforos.h"
 
 //Variables globales
 extern char *lpl;
@@ -29,7 +30,7 @@ extern unsigned int lpr;
 extern unsigned int finQ;
 extern unsigned int finIO;
 
-
+extern int semaforos;
 //Prototipos
 void planificar(nodo_proceso**);
 nodo_proceso** planificarPorFIFO(nodo_proceso**);
@@ -37,48 +38,58 @@ nodo_proceso* planificarPorPRI(nodo_proceso **listaAPlanificar);
 nodo_proceso *ordenaPorPrioridad(nodo_proceso *listaAPlanificar, int n);
 int cantidad_nodos(nodo_proceso **listaAPlanificar);
 nodo_proceso** planificarPorRR(nodo_proceso **listaAPlanificar);
-
+int las_listas_estan_vacias_sts();
 //AUX
-int esperar_a_que_se_llene_sts(nodo_proceso **lista);
-extern int global_sts;
-extern int global_procer;
 
 void * STS_funcion (){
 	unsigned int prioridad;
 
-	esperar_a_que_se_llene_sts(listaProcesosNuevos);
-	printf("Sali de esperar esperar en STS\n");
-	//TODO: la prioridad maxima debe ser variable.
-	for (prioridad = 1; prioridad < 4; ++prioridad) {
-		if(prioridad == lpn){
-			if (listaProcesosNuevos != NULL){
-				//TODO:Implementar semaforos
-				agregar_lista_de_procesos(listaProcesosListos,listaProcesosNuevos,prioridad);
+	while(1){
+		if ( las_listas_estan_vacias_sts() != 0 ){
+
+			//TODO:implementar los semaforos de las listas restantes
+			//TODO: la prioridad maxima debe ser variable.
+			for (prioridad = 1; prioridad < 4; ++prioridad) {
+				if(prioridad == lpn){
+					if (listaProcesosNuevos != NULL){
+						//TODO:Implementar semaforos
+						printf("Entre en esperar en STS,con semaforo\n");
+						esperar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+						esperar_semaforo(semaforos,SEM_LISTA_LISTOS);
+						agregar_lista_de_procesos(listaProcesosListos,listaProcesosNuevos,prioridad);
+						liberar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+						liberar_semaforo(semaforos,SEM_LISTA_LISTOS);
+						printf("Sali de esperar esperar en STS\n");
+					}
+				}
+				/*if (prioridad == lpr ){
+					if (listaProcesosReanudados != NULL){
+						agregar_lista_de_procesos(listaProcesosListos,listaProcesosReanudados,prioridad);
+					}
+				}
+				if (prioridad == finQ ){
+					if (listaFinQuantum != NULL){
+						agregar_lista_de_procesos(listaProcesosListos,listaFinQuantum,prioridad);
+					}
+				}
+				if (prioridad == finIO){
+					if (listaFinIO != NULL){
+						agregar_lista_de_procesos(listaProcesosListos,listaFinIO,prioridad);
+					}
+				}
+				*/
 			}
+			mostrar_lista(listaProcesosListos);
+			printf("Estoy por planificar\n");
+			esperar_semaforo(semaforos,SEM_LISTA_LISTOS);
+			planificar(listaProcesosListos);
+			liberar_semaforo(semaforos,SEM_LISTA_LISTOS);
+			printf("Libere el semaforo de listos\n");
+			mostrar_lista(listaProcesosListos);
+		}else{
+			sleep(1);
 		}
-		/*if (prioridad == lpr ){
-			if (listaProcesosReanudados != NULL){
-				agregar_lista_de_procesos(listaProcesosListos,listaProcesosReanudados,prioridad);
-			}
-		}
-		if (prioridad == finQ ){
-			if (listaFinQuantum != NULL){
-				agregar_lista_de_procesos(listaProcesosListos,listaFinQuantum,prioridad);
-			}
-		}
-		if (prioridad == finIO){
-			if (listaFinIO != NULL){
-				agregar_lista_de_procesos(listaProcesosListos,listaFinIO,prioridad);
-			}
-		}
-		*/
 	}
-	mostrar_lista(listaProcesosListos);
-	printf("Estoy por planificar\n");
-	planificar(listaProcesosListos);
-	mostrar_lista(listaProcesosListos);
-	global_sts=0;
-	global_procer=1;
 	return 0;
 }
 
@@ -158,11 +169,10 @@ int cantidad_nodos(nodo_proceso **listaAPlanificar){
 	return cant_nodos;
 }
 
-//Semaforo auxiliar
-int esperar_a_que_se_llene_sts(nodo_proceso **lista){
-	printf("Entre en esperar en STS\n");
-	while( global_sts == 0 ){
-		sleep(1);
+int las_listas_estan_vacias_sts(){
+	if( *listaProcesosNuevos == NULL ){
+		return 0;
 	}
-	return 0;
+	//TODO:Agregar las otras listas
+	return 1;
 }

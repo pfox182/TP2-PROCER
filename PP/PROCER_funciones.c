@@ -6,16 +6,15 @@
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_listas.h"
 #include "../Estructuras/manejo_pila_ejecucion.h"
-
+#include "../Estructuras/manejo_semaforos.h"
 #include "PROCER_funciones.h"
-//AUX
-extern int global_iot;
 
 //Variables globales
 extern char *lpl;
 extern unsigned int quantum_max;
 extern char *espera_estandar;
 extern int cant_iot_disponibles;
+extern int semaforos;
 
 //Listas globales
 extern nodo_entrada_salida **listaBloqueados;
@@ -491,9 +490,12 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	instruccion.instruccion="imprimir";
 	instruccion.mensaje=msj;
 
-	//TODO:implementar semaforos
+	printf("Estoy por esperar el semaforo BLOQUEADOS\n");
+	esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
+	printf("Estoy usando el semaforo BLOQUEADOS\n");
 	agregar_entrada_salida(listaBloqueados,instruccion);
-	global_iot=1;
+	liberar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
+	printf("Estoy liberando el semaforo BLOQUEADOS\n");
 	printf("Agregue a E/S\n");
 
 	return 0;
@@ -513,14 +515,16 @@ int ejecutar_io(char *palabra,proceso proceso){
 	//TODO:implementar semaforos
 	if( atoi(tipo) == BLOQUEANTE){
 		proceso.pcb.pc++;
+		esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
 		agregar_entrada_salida(listaBloqueados,instruccion);
-		global_iot=1;
+		liberar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
 		printf("Agregue a E/S\n");
 	}else{
 		if( cant_iot_disponibles > 0){
 			proceso.pcb.pc++;
+			esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
 			agregar_primero_entrada_salida(listaBloqueados,instruccion);
-			global_iot=1;
+			liberar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
 		}else{
 			printf("Error iot ocupados\n");
 			return -1;
