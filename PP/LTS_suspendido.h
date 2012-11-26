@@ -5,7 +5,7 @@
  *      Author: utnso
  */
 
-
+/*
 #ifndef LTS_suspendido_H_
 #define LTS_suspendido_H_
 

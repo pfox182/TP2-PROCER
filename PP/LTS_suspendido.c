@@ -5,7 +5,7 @@
  *      Author: utnso
  */
 
-/*
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +24,7 @@ extern nodo_proceso **listaProcesosSuspendidos;
 extern int mpp;
 extern int mpp_max;
 
+/*
 
 
 
@@ -39,7 +40,8 @@ void *LTS_suspendido(){
 	char *numero=(char *)malloc(strlen("00000"));
 	char *var=(char *)malloc(sizeof(char));
 
-	char msjVariables[]="El estado del proceso suspendido es:\n";
+	char *msjVariables=(char *)malloc(1024);//mirar tamaño
+	strcpy(msjVariables,"El estado del proceso suspendido es:\n");
 	char msjReanudo[]="Desea reanudar el proceso.(si/no):";
 	char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(MMP)";
 
@@ -55,12 +57,9 @@ void *LTS_suspendido(){
 			var[0]=proceso.pcb.datos[i].variable;
 			var[1]='\0';
 			strcat(msjVariables,var);
-			strcat(msjVariables,"= ");
+			strcat(msjVariables," = ");
 			sprintf(numero,"%d",proceso.pcb.datos[i].valor);
 			strcat(msjVariables,numero);
-			//for(i=0;i<strlen(numero);i++){
-				//msjVariables[strlen(msjVariables)]=numero[i];
-			//}
 			strcat(msjVariables,"\n");
 
 		}
@@ -101,5 +100,5 @@ void *LTS_suspendido(){
 
 	return 0;
 }
-*/
 
+*/
