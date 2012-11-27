@@ -34,73 +34,101 @@ int las_listas_estan_vacias_lts();
 void *LTS_suspendido(){
 	while(1){
 		if ( las_listas_estan_vacias_lts() != 0 ){
+
 			proceso proceso;
 			int i;
 			char *respuestaReanudo=(char *)malloc(strlen("si"));
 			char *numero=(char *)malloc(strlen("00000"));
 			char *var=(char *)malloc(sizeof(char));
-
+			char *id=(char *)malloc(strlen("00000"));
+			char *pc=(char *)malloc(strlen("00000"));
+			char *funcion=(char *)malloc(strlen("00000"));
 			char *msjVariables=(char *)malloc(1024);//mirar tamaño
+
 			strcpy(msjVariables,"El estado del proceso suspendido es:\n");
+			char template[]="------------------------------------------\n\n";
+			char template1[]="ID=";
+			char template2[]="PD=";
+			char template3[]="\n- Estructura de codigo ----\n";
+			char template4[]="-------------------------\n\n- Estructura de Datos ----\n";
+			char template5[]="-------------------------\n\n- Estructura de Stack ----\n";
 			char msjReanudo[]="Desea reanudar el proceso.(si/no):";
 			char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(MMP)";
+
 
 			esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
 			proceso = sacar_proceso(listaProcesosSuspendidos);
 			liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
 
-			while( proceso.pcb.pid != -1 ){
 
-				//Armo msjVariables para el proceso suspendido
-				for( i=0;i<26;i++){
+			strcat(msjVariables,template);
 
-					//filtrar variables que no estan en el proceso
-					var[0]=proceso.pcb.datos[i].variable;
-					var[1]='\0';
-					strcat(msjVariables,var);
-					strcat(msjVariables," = ");
-					sprintf(numero,"%d",proceso.pcb.datos[i].valor);
-					strcat(msjVariables,numero);
-					strcat(msjVariables,"\n");
+			//ID
+			strcat(msjVariables,template1);
+			sprintf(id,"%d",proceso.pcb.pid);
+			strcat(msjVariables,id);
+			//PC
+			strcat(msjVariables,template2);
+			sprintf(pc,"%d",proceso.pcb.pc);
+			strcat(msjVariables,pc);
+			//CODIGO
+			strcat(msjVariables,template3);
+			strcat(msjVariables,proceso.pcb.codigo);
 
-				}
+			//VARIABLES
+			strcat(msjVariables,template4);
+			for( i=0;i<26;i++){
 
-				//Envio mensaje variables proceso suspendido.
-				enviar_mensaje(msjVariables,proceso.cliente_sock);
+				//filtrar variables que no estan en el proceso
+				var[0]=proceso.pcb.datos[i].variable;
+				var[1]='\0';
+				strcat(msjVariables,var);
+				strcat(msjVariables,"=");
+				sprintf(numero,"%d",proceso.pcb.datos[i].valor);
+				strcat(msjVariables,numero);
+				strcat(msjVariables,"\n");
 
-				//Envio mensaje reanudacion.
-				enviar_mensaje(msjReanudo,proceso.cliente_sock);
+			}
 
-				//Recibo la respuesta de msjReanudo
-				//recibir_mensaje(respuestaReanudo,proceso.cliente_sock);
+			//FUNCIONES
+			strcat(msjVariables,template5);
+			sprintf(funcion,"%d",proceso.pcb.pila->linea);
+			strcat(funcion,",");
+			strcat(funcion,proceso.pcb.pila->funcion);
+			strcat(msjVariables,funcion);
 
-				respuestaReanudo="si";
-				if ( (strstr(respuestaReanudo,"si")) != NULL ){
-					if ( mmp < max_mmp ){
-						esperar_semaforo(semaforos,SEM_LISTA_REANUDADOS);
-						agregar_proceso(listaProcesosReanudados,proceso);
-						liberar_semaforo(semaforos,SEM_LISTA_REANUDADOS);
-					}else{
-						esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
-						agregar_proceso(listaProcesosSuspendidos,proceso);
-						liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
-						enviar_mensaje(msjMMP,proceso.cliente_sock);
-					}
 
+			//Mensaje reanudacion
+			strcat(msjVariables,msjReanudo);
+			//Envio mensaje con el estado proceso suspendido y pregunto si se reanuda.
+			enviar_mensaje(msjVariables,proceso.cliente_sock);
+
+
+			//Recibo la respuesta de msjReanudo
+			//recibir_mensaje(respuestaReanudo,proceso.cliente_sock);
+
+			respuestaReanudo="si";
+			if ( (strstr(respuestaReanudo,"si")) != NULL ){
+				if ( mmp < max_mmp ){
+					esperar_semaforo(semaforos,SEM_LISTA_REANUDADOS);
+					agregar_proceso(listaProcesosReanudados,proceso);
+					liberar_semaforo(semaforos,SEM_LISTA_REANUDADOS);
 				}else{
 					esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
 					agregar_proceso(listaProcesosSuspendidos,proceso);
 					liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
+					enviar_mensaje(msjMMP,proceso.cliente_sock);
 				}
+
+			}else{
 				esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
-				proceso = sacar_proceso(listaProcesosSuspendidos);
+				agregar_proceso(listaProcesosSuspendidos,proceso);
 				liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
 			}
 		}else{
 			sleep(1);
 		}
 	}
-
 	return 0;
 }
 
