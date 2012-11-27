@@ -36,6 +36,7 @@ void *LTS_suspendido(){
 		if ( las_listas_estan_vacias_lts() != 0 ){
 
 			proceso proceso;
+			stack aux;
 			int i;
 			char *respuestaReanudo=(char *)malloc(strlen("si"));
 			char *numero=(char *)malloc(strlen("00000"));
@@ -92,10 +93,17 @@ void *LTS_suspendido(){
 
 			//FUNCIONES
 			strcat(msjVariables,template5);
-			sprintf(funcion,"%d",proceso.pcb.pila->linea);
-			strcat(funcion,",");
-			strcat(funcion,proceso.pcb.pila->funcion);
-			strcat(msjVariables,funcion);
+
+			aux=*proceso.pcb.pila;
+			while ( aux.siguiente != NULL ){
+
+				sprintf(funcion,"%d",proceso.pcb.pila->linea);
+				strcat(funcion,",");
+				strcat(funcion,proceso.pcb.pila->funcion);
+				strcat(msjVariables,funcion);
+				aux.siguiente = proceso.pcb.pila->siguiente;
+
+			}
 
 
 			//Mensaje reanudacion
@@ -125,6 +133,12 @@ void *LTS_suspendido(){
 				agregar_proceso(listaProcesosSuspendidos,proceso);
 				liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
 			}
+
+		//Limpiar los string.
+
+
+
+
 		}else{
 			sleep(1);
 		}
