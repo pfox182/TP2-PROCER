@@ -84,9 +84,11 @@ int main(int argc, char *argv[])
    semaforos=inicializar_semaforos(1);
 
    cargar_archivo_configuracion();
+   printf("Cargue el archivo de configuracion\n");
 
    //CREACION DE LOS HILOS DEL PP.
    //TODO agregar validaciones a los hilos.
+   liberar_semaforo(semaforos,SEM_LISTA_NUEVOS);
 
    printf("Creando hilo de LTS\n");
    pthread_create(&(LTS_hilo), NULL, LTS_funcion, NULL); // Creamos el thread LTS
@@ -216,11 +218,12 @@ int cargar_archivo_configuracion(){
 				puerto=valor;
 			}
 		}
-		if( strstr(linea,"espera_estandar")){
+		if( strstr(linea,"espera_estandar") && strstr(linea,"espera_estandar_io") == NULL){
 			valor = strtok(linea," ");
 			valor = strtok(NULL,";");
 			if( valor != NULL ){
 				espera_estandar=valor;
+				printf("La espera estandar es %s\n",espera_estandar);
 			}
 		}
 		if( strstr(linea,"espera_estandar_io")){
