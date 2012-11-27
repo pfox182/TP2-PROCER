@@ -13,6 +13,7 @@
 
 //Prototipos
 int enviar_proceso_terminado(proceso proceso);
+int liberar_proceso(proceso *proceso);
 int las_listas_estan_vacias_procer();
 
 //Variables globales pp.c
@@ -106,12 +107,14 @@ void * PROCER_funcion(){
 
 							mostrar_datos(proceso.pcb.datos);
 							enviar_proceso_terminado(proceso);
+							liberar_proceso(&proceso);
 							break;
 						}
 					}
 					bzero(instruccion,strlen(instruccion));
 				}
 			}
+			cont_quantum=0;
 		}else{
 			sleep(1);
 		}
@@ -144,6 +147,21 @@ int enviar_proceso_terminado(proceso proceso){
 	if ( enviar_mensaje(msjVariables,proceso.cliente_sock) == -1 ){
 		return -1;
 	}
+
+	return 0;
+}
+
+int liberar_proceso(proceso *proceso){
+	free(proceso->pcb.codigo);
+	printf("Libere el codigo\n");
+	free(proceso->pcb.datos);
+	printf("Libere los datos\n");
+	free(proceso->pcb.pila);
+	printf("Libere la pila\n");
+	free(proceso->pila_ejecucion);
+	printf("Libere la pila de ejecucion\n");
+	close(proceso->cliente_sock);
+	printf("Cerre la conexion\n");
 
 	return 0;
 }

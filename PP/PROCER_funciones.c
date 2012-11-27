@@ -202,29 +202,6 @@ int ejecutar_funcion(char *nombre_funcion,proceso *proceso){
 	agregar_a_pila_ejecucion(aux,(*proceso).pila_ejecucion);
 	printf("Se agrego la seccion: %s con el contador=%d\n",fin_funcion,posicion);
 
-	//TODO:Se debe contar como 1 quantum por toda la funcion o 1 quantum x cada instruccion??
-	//TODO:Que asa si se suspende el programa aca
-//	instruccion = leer_instruccion(proceso.pcb.codigo,posicion);
-//	if( instruccion == NULL){
-//		printf("La instruccion leida de la funcion %s en la linea %d es nula\n",nombre_funcion,posicion);
-//		return -1;
-//	}
-//	printf("Antes del while, la instruccion %s, en la posicion %d\n ",instruccion,posicion);
-//	while( strcmp(instruccion,fin_funcion) != 0 ){
-//		if( instruccion != NULL ){
-//			printf("La instruccion de la funcion %s, a ejecutar es %s, en la posicion %d\n",nombre_funcion,instruccion,posicion);
-//			if( ejecutar_instruccion(instruccion,&proceso) == -1){
-//				printf("Error al ejecutar la instruccion:%s ,de la funcion %s\n",instruccion,nombre_funcion);
-//				return -1;
-//			}
-//		}else{
-//			printf("La instruccion leida de la funcion %s en la linea %d es nula\n",nombre_funcion,posicion);
-//			return -1;
-//		}
-//		posicion++;
-//		instruccion = leer_instruccion(proceso.pcb.codigo,posicion);
-//	}
-
 	return 0;
 }
 unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
