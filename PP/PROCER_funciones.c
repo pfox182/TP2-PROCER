@@ -24,7 +24,9 @@ int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned i
 	int fin=0;
 	if( strcmp(lpl,"RR") == 0){
 		if( cont_quantum >= quantum_max ){
+			esperar_semaforo(semaforos,SEM_LISTA_FIN_QUANTUM);
 			agregar_proceso(listaFinQuantum,proceso);
+			liberar_semaforo(semaforos,SEM_LISTA_FIN_QUANTUM);
 			printf("Se sobrepaso el quantum\n");
 			fin = -1;
 		}
@@ -490,12 +492,10 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	instruccion.instruccion="imprimir";
 	instruccion.mensaje=msj;
 
-	printf("Estoy por esperar el semaforo BLOQUEADOS\n");
 	esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
-	printf("Estoy usando el semaforo BLOQUEADOS\n");
 	agregar_entrada_salida(listaBloqueados,instruccion);
 	liberar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
-	printf("Estoy liberando el semaforo BLOQUEADOS\n");
+
 	printf("Agregue a E/S\n");
 
 	return 0;
@@ -512,14 +512,18 @@ int ejecutar_io(char *palabra,proceso proceso){
 	instruccion.instruccion="io";
 	instruccion.mensaje=numero;//El mensaje tiene el tiempo de espera
 
-	//TODO:implementar semaforos
 	if( atoi(tipo) == BLOQUEANTE){
 		proceso.pcb.pc++;
+
 		esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
 		agregar_entrada_salida(listaBloqueados,instruccion);
 		liberar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
+
 		printf("Agregue a E/S\n");
 	}else{
+
+		esperar_semaforo(semaforos,SEM_VAR_CANT_IOT_DISPONIBLES);
+
 		if( cant_iot_disponibles > 0){
 			proceso.pcb.pc++;
 			esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
@@ -529,9 +533,10 @@ int ejecutar_io(char *palabra,proceso proceso){
 			printf("Error iot ocupados\n");
 			return -1;
 		}
-	}
 
-	//sleep(atoi(numero));
+		liberar_semaforo(semaforos,SEM_VAR_CANT_IOT_DISPONIBLES);
+
+	}
 
 	return 0;
 }

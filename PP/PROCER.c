@@ -34,10 +34,11 @@ void * PROCER_funcion(){
 	while(1){
 		if ( las_listas_estan_vacias_procer() != 0 ){
 
-			printf("Sali de espera en PROCER\n");
+
 			esperar_semaforo(semaforos,SEM_LISTA_LISTOS);
 			proceso proceso=sacar_proceso(listaProcesosListos);
 			liberar_semaforo(semaforos,SEM_LISTA_LISTOS);
+
 			printf("Se saco el proceso PID:%d de listos\n",proceso.pcb.pid);
 			printf("El codigo es:\n%s\n",proceso.pcb.codigo);
 
@@ -60,52 +61,57 @@ void * PROCER_funcion(){
 				   esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
 				   agregar_proceso(listaProcesosSuspendidos,proceso);
 				   liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
-				   return 0; //TODO:hay que ver si va return
-			   }
+			   }else{//No se suspendio la ejecucion
 
-			   seccion_a_ejecutar=sacar_primera_seccion(proceso.pila_ejecucion);
-			   if( strcmp(seccion_a_ejecutar.nombre_seccion,"") == 0){
-				   printf("Error al sacar la seccion a ejecutar, es igual a NULL\n");
-				   break;
-			   }
-			   printf("Se extrajo { la seccion %s con contador=%d }\n",seccion_a_ejecutar.nombre_seccion,*seccion_a_ejecutar.contador_instruccion);
+				   seccion_a_ejecutar=sacar_primera_seccion(proceso.pila_ejecucion);
+				   if( strcmp(seccion_a_ejecutar.nombre_seccion,"") == 0){
+					   printf("Error al sacar la seccion a ejecutar, es igual a NULL\n");
+					   break;
+				   }
+				   printf("Se extrajo { la seccion %s con contador=%d }\n",seccion_a_ejecutar.nombre_seccion,*seccion_a_ejecutar.contador_instruccion);
 
-				printf("El PC es %d\n",proceso.pcb.pc);
-				printf("Voy a leer la instruccion %d de la seccion %s\n",*seccion_a_ejecutar.contador_instruccion,seccion_a_ejecutar.nombre_seccion);
-				//Leemos la siguiente instruccion a ejecutar
-				instruccion = leer_instruccion(proceso.pcb.codigo,*seccion_a_ejecutar.contador_instruccion);
-				if( instruccion != NULL){
-					//Calculo la proxima instruccion a leer
-					++(*seccion_a_ejecutar.contador_instruccion);
-					cont_quantum++;
+					printf("El PC es %d\n",proceso.pcb.pc);
+					printf("Voy a leer la instruccion %d de la seccion %s\n",*seccion_a_ejecutar.contador_instruccion,seccion_a_ejecutar.nombre_seccion);
+					//Leemos la siguiente instruccion a ejecutar
+					instruccion = leer_instruccion(proceso.pcb.codigo,*seccion_a_ejecutar.contador_instruccion);
+					if( instruccion != NULL){
+						//Calculo la proxima instruccion a leer
+						++(*seccion_a_ejecutar.contador_instruccion);
+						cont_quantum++;
 
-					if( strcmp(instruccion,seccion_a_ejecutar.nombre_seccion) != 0){//No es el fin de la seccion a ejecutar
-						agregar_a_pila_ejecucion(seccion_a_ejecutar,proceso.pila_ejecucion);
-						printf("Se volvio a agregar a la pila la seccion %s con contador=%d\n",seccion_a_ejecutar.nombre_seccion,*seccion_a_ejecutar.contador_instruccion);
-					}
-
-					if( strcmp(instruccion,"fin_programa") != 0){
-						retorno = ejecutar_instruccion(instruccion,&proceso,&seccion_a_ejecutar);
-						if( retorno == -1){
-							printf("Error al ejecutar instruccion:\n %s\n",instruccion);
+						if( strcmp(instruccion,seccion_a_ejecutar.nombre_seccion) != 0){//No es el fin de la seccion a ejecutar
+							agregar_a_pila_ejecucion(seccion_a_ejecutar,proceso.pila_ejecucion);
+							printf("Se volvio a agregar a la pila la seccion %s con contador=%d\n",seccion_a_ejecutar.nombre_seccion,*seccion_a_ejecutar.contador_instruccion);
 						}
-						if( retorno == 1){//Quiere decir que se ejecuto una entrada/salida
-							printf("Nos fuimos a entrada/salida\n");
+
+						if( strcmp(instruccion,"fin_programa") != 0){
+							retorno = ejecutar_instruccion(instruccion,&proceso,&seccion_a_ejecutar);
+							if( retorno == -1){
+								printf("Error al ejecutar instruccion:\n %s\n",instruccion);
+							}
+							if( retorno == 1){//Quiere decir que se ejecuto una entrada/salida
+								printf("Nos fuimos a entrada/salida\n");
+								break;
+							}
+						}else{
+							printf("Finalizo la ejecucion\n");
+
+							esperar_semaforo(semaforos,SEM_VAR_MMP);
+							--mmp;
+							liberar_semaforo(semaforos,SEM_VAR_MMP);
+
+							esperar_semaforo(semaforos,SEM_VAR_MPS);
+							--mps;
+							liberar_semaforo(semaforos,SEM_VAR_MPS);
+
+							mostrar_datos(proceso.pcb.datos);
+							enviar_proceso_terminado(proceso);
 							break;
 						}
-					}else{
-						printf("Finalizo la ejecucion\n");
-						//TODO:implemetar semaforos
-						--mmp;
-						--mps;
-						mostrar_datos(proceso.pcb.datos);
-						enviar_proceso_terminado(proceso);
-						break;
 					}
+					bzero(instruccion,strlen(instruccion));
 				}
-				bzero(instruccion,strlen(instruccion));
 			}
-			printf("El PC es %d\n",proceso.pcb.pc);
 		}else{
 			sleep(1);
 		}
@@ -146,7 +152,6 @@ int las_listas_estan_vacias_procer(){
 	if( *listaProcesosListos == NULL ){
 		return 0;
 	}
-	//TODO:Agregar las otras listas
 	return 1;
 }
 
