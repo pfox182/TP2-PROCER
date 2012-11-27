@@ -58,10 +58,12 @@ void * PROCER_funcion(){
 				   printf("Se agrego por 1° vez la seccion PROGRAMA\n");
 			   }
 			   if( suspendido == 1){
-				   printf("Agregue el proceso %d a Suspendidos\n",proceso.pcb.pid);
 				   esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
 				   agregar_proceso(listaProcesosSuspendidos,proceso);
 				   liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
+				   printf("Agregue el proceso %d a Suspendidos\n",proceso.pcb.pid);
+				   suspendido = 0;
+				   break;
 			   }else{//No se suspendio la ejecucion
 
 				   seccion_a_ejecutar=sacar_primera_seccion(proceso.pila_ejecucion);
