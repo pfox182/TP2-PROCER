@@ -35,27 +35,28 @@ int global_iot=0;
 //SEMAFOROS *************************************
 int semaforos;
 //***************************
-/*
- * Variables globales
- */
+
+//Variables globales del archivo de configuracion
+unsigned int max_mps=10; //Maximo de procesos en el sistema
+unsigned int max_mmp=10; //Maximo valor de multiprogramacion
+char *lpl; //Algoritmo de ordenamiento para lista de procesos listos.
+unsigned int quantum_max=2;
+char *puerto;
+	//Prioridades de los algoritmos.
+unsigned int lpn;
+unsigned int lpr;
+unsigned int finQ;
+unsigned int finIO;
+char *espera_estandar;
+char *espera_estandar_io;
+unsigned int cantidad_hilos_iot; //Valor de hilos IOT
+
+//Variables globales propias
 int suspendido=0;
 unsigned int mps; //Procesos en el sistema
 unsigned int mmp; //Valor de multiprogramacion
-unsigned int max_mps=10; //Maximo de procesos en el sistema
-unsigned int max_mmp=10; //Maximo valor de multiprogramacion
-unsigned int cantidad_hilos_iot=1; //Valor de hilos IOT
-unsigned int pid=0;
-char *lpl="FIFO"; //Algoritmo de ordenamiento para lista de procesos listos.
-unsigned int quantum_max=2;
-char *espera_estandar="60";
-char *espera_estandar_io="1";
 int cant_iot_disponibles;
-
-//Prioridades de los algoritmos.
-unsigned int lpn=1;
-unsigned int lpr=2;
-unsigned int finQ=4;
-unsigned int finIO=3;
+unsigned int pid=0;
 
 //Listas de procesos.
 nodo_proceso **listaProcesosNuevos;
@@ -83,8 +84,7 @@ int main(int argc, char *argv[])
    semaforos=inicializar_semaforos(1);
 
    cargar_archivo_configuracion();
-   printf("mps=%d\n",mps);
-   printf("mpp=%d\n",mmp);
+
    //CREACION DE LOS HILOS DEL PP.
    //TODO agregar validaciones a los hilos.
 
@@ -124,18 +124,25 @@ int cargar_archivo_configuracion(){
 
 	listaConeccionesDemoradas=(coneccionesDemoradas **)malloc(sizeof(coneccionesDemoradas));
 	bzero(listaConeccionesDemoradas,sizeof(coneccionesDemoradas));
+
 	listaFinIO=(nodo_proceso **)malloc(sizeof(nodo_proceso));
 	bzero(listaFinIO,sizeof(nodo_proceso));
+
 	listaProcesosReanudados=(nodo_proceso **)malloc(sizeof(nodo_proceso));
 	bzero(listaProcesosReanudados,sizeof(nodo_proceso));
+
 	listaProcesosSuspendidos=(nodo_proceso **)malloc(sizeof(nodo_proceso));
 	bzero(listaProcesosSuspendidos,sizeof(nodo_proceso));
+
 	listaFinQuantum=(nodo_proceso **)malloc(sizeof(nodo_proceso));
 	bzero(listaFinQuantum,sizeof(nodo_proceso));
+
 	listaProcesosNuevos=(nodo_proceso **)malloc(sizeof(nodo_proceso));
 	bzero(listaProcesosNuevos,sizeof(nodo_proceso));
+
 	listaProcesosListos=(nodo_proceso **)malloc(sizeof(nodo_proceso));
 	bzero(listaProcesosListos,sizeof(nodo_proceso));
+
 	listaBloqueados=(nodo_entrada_salida **)malloc(sizeof(nodo_entrada_salida));
 	bzero(listaBloqueados,sizeof(nodo_entrada_salida));
 
@@ -147,25 +154,26 @@ int cargar_archivo_configuracion(){
 			valor = strtok(linea," ");
 			valor = strtok(NULL,";");
 			if( valor != NULL ){
-				mps=atoi(valor);
+				max_mps=atoi(valor);
+				mps=0;
 			}
 		}
 		if( strstr(linea,"mpp")){
 			valor = strtok(linea," ");
 			valor = strtok(NULL,";");
 			if( valor != NULL ){
-				mmp=atoi(valor);
+				max_mmp=atoi(valor);
+				mmp=0;
 			}
 		}
 
-		if( strstr(linea,"lpl")){
+		if( strstr(linea,"lpl")){//Algoritmo de ordenamiento de lista de listos
 			valor = strtok(linea," ");
 			valor = strtok(NULL,";");
 			if( valor != NULL ){
 				lpl=valor;
 			}
 		}
-
 		if( strstr(linea,"quantum_max")){
 			valor = strtok(linea," ");
 			valor = strtok(NULL,";");
@@ -173,7 +181,41 @@ int cargar_archivo_configuracion(){
 				quantum_max=atoi(valor);
 			}
 		}
-
+		if( strstr(linea,"lpn")){//Prioridad de un proceso NUEVO
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				lpn=atoi(valor);
+			}
+		}
+		if( strstr(linea,"lpr")){//Prioridad de un proceso REANUDADO
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				lpr=atoi(valor);
+			}
+		}
+		if( strstr(linea,"finQ")){//Prioridad de un proceso de FIN QUANTUM
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				finQ=atoi(valor);
+			}
+		}
+		if( strstr(linea,"finIO")){//Prioridad de un proceso de FIN E/S
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				finIO=atoi(valor);
+			}
+		}
+		if( strstr(linea,"puerto")){//Puerto del server TCP/IP
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				puerto=valor;
+			}
+		}
 		if( strstr(linea,"espera_estandar")){
 			valor = strtok(linea," ");
 			valor = strtok(NULL,";");
@@ -181,6 +223,22 @@ int cargar_archivo_configuracion(){
 				espera_estandar=valor;
 			}
 		}
+		if( strstr(linea,"espera_estandar_io")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				espera_estandar_io=valor;
+			}
+		}
+		if( strstr(linea,"cantidad_hilos_iot")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				cantidad_hilos_iot=atoi(valor);
+				cant_iot_disponibles=atoi(valor);
+			}
+		}
+
 	}
 
 	return 0;
