@@ -22,6 +22,8 @@ extern nodo_proceso **listaFinQuantum;
 
 int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned int cant_instrucciones){
 	int fin=0;
+
+	esperar_semaforo(semaforos,SEM_VAR_LPL);
 	if( strcmp(lpl,"RR") == 0){
 		if( cont_quantum >= quantum_max ){
 			esperar_semaforo(semaforos,SEM_LISTA_FIN_QUANTUM);
@@ -31,6 +33,8 @@ int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned i
 			fin = -1;
 		}
 	}
+	liberar_semaforo(semaforos,SEM_VAR_LPL);
+
 	if( proceso.pcb.pc > cant_instrucciones){
 		printf("Se sobrepaso el pc->%d cant_inst->%d\n",proceso.pcb.pc,cant_instrucciones);
 		fin = -1;
@@ -311,8 +315,10 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 
 	asignar_valor(variable,valor_total,pcb.datos);
 	if( se_espero == 'n'){//Solo se espera si no se espero en ';'
+
+		esperar_semaforo(semaforos,SEM_VAR_ESPERA_ESTANDAR);
 		sleep(atoi(espera_estandar));
-		//sleep(30);
+		liberar_semaforo(semaforos,SEM_VAR_ESPERA_ESTANDAR);
 	}
 	return 0;
 
@@ -445,7 +451,10 @@ int ejecutar_salto(char *tipo_de_salto,char *resto,pcb pcb,seccion *seccion_ejec
 		}
 	}
 
+	esperar_semaforo(semaforos,SEM_VAR_ESPERA_ESTANDAR);
 	sleep(atoi(espera_estandar));
+	liberar_semaforo(semaforos,SEM_VAR_ESPERA_ESTANDAR);
+
 	return 0;
 }
 
