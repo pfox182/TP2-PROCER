@@ -26,17 +26,20 @@
 void mostrar_funciones(stack *pila);
 
 //Prototipos de funcion
-int server_socket(char *puerto);
+int server_socket(char *port);
 proceso crear_proceso(char *buffer,int socket);
 data* cargar_datos(char *buffer);
 void error(const char *msg);
 stack* sacar_funciones(char *buffer);
 int administrar_conexion(int cliente_sock,fd_set *master);
 int validar_mps_mmp(int cliente_sock);
+
+
 //Variables globales
 extern unsigned int mps,mmp,max_mps,max_mmp; //Se usa extern para indicar que son variables globales de otro archivo
 extern unsigned int pid;
 extern int semaforos;
+extern char* puerto;
 
 //Listas
 extern nodo_proceso **listaProcesosNuevos;
@@ -44,7 +47,6 @@ extern coneccionesDemoradas **listaConeccionesDemoradas;
 
 void * LTS_funcion(void * var){
 	pthread_t LTS_suspendido_hilo;
-	char *puerto="4545";
 
 	printf("Creando hilo de LTS\n");
 
@@ -66,7 +68,7 @@ void * LTS_funcion(void * var){
  en un proceso hijo, el cual la adminstra con
  la funcion administrar_coneccion().
  ****************************************/
-int server_socket(char *puerto)
+int server_socket(char *port)
 {
 	//Declaraciones para el select
 		fd_set master;//Conjunto maestro de descriptores de ficheros
@@ -83,7 +85,7 @@ int server_socket(char *puerto)
      struct sockaddr_in serv_addr, cli_addr;
      int yes=1;
 
-     if (puerto == NULL) {
+     if (port == NULL) {
          fprintf(stderr,"ERROR, no port provided\n");
          exit(1);
      }
@@ -99,7 +101,7 @@ int server_socket(char *puerto)
      }
 
      bzero((char *) &serv_addr, sizeof(serv_addr));
-     portno = atoi(puerto);//Transformamos el char* a int
+     portno = atoi(port);//Transformamos el char* a int
 #include "../Estructuras/proceso.h"
      //Creamos la estructura serv_addr
      serv_addr.sin_family = AF_INET;
@@ -171,11 +173,19 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 			recibir_mensaje(buffer,socket_demorado);
 			printf("Recibi el codigo del socket demorado\n");
 			proceso = crear_proceso(buffer,socket_demorado);
-			//TODO:implementar semaforos
+
+			esperar_semaforo(semaforos,SEM_LISTA_NUEVOS);
 			agregar_proceso(listaProcesosNuevos,proceso);
-			 //TODO: IMPLEMENTAR SEMAFOROS
-			 mps++;
-			 mmp++;
+			liberar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+
+			esperar_semaforo(semaforos,SEM_VAR_MPS);
+			mps++;
+			liberar_semaforo(semaforos,SEM_VAR_MPS);
+
+			esperar_semaforo(semaforos,SEM_VAR_MMP);
+			mmp++;
+			liberar_semaforo(semaforos,SEM_VAR_MMP);
+
 		}else{
 			if( retorno == 1){
 				printf("Volvi a encolar el socket demorado\n");
@@ -195,14 +205,19 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 		 //Creamos el proceso
 		 proceso = crear_proceso(buffer,cliente_sock);
 		if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
-			 //TODO:implementar semaforos
-			 esperar_semaforo(semaforos,SEM_LISTA_NUEVOS);
-			 agregar_proceso(listaProcesosNuevos,proceso);
-			 liberar_semaforo(semaforos,0);
 
-			 //TODO: IMPLEMENTAR SEMAFOROS
-			 mps++;
-			 mmp++;
+			printf("Sali del Validar\n");
+			esperar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+			agregar_proceso(listaProcesosNuevos,proceso);
+			liberar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+
+			esperar_semaforo(semaforos,SEM_VAR_MPS);
+			mps++;
+			liberar_semaforo(semaforos,SEM_VAR_MPS);
+
+			esperar_semaforo(semaforos,SEM_VAR_MMP);
+			mmp++;
+			liberar_semaforo(semaforos,SEM_VAR_MMP);
 
 			 printf("El proceso creado fue:\n");
 				printf("\tPID:%d\n",proceso.pcb.pid);
@@ -227,7 +242,8 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 }
 int validar_mps_mmp(int cliente_sock){
 
-	//TODO:implementar semaforos
+	esperar_semaforo(semaforos,SEM_VAR_MPS);
+	esperar_semaforo(semaforos,SEM_VAR_MMP);
 	if( mps >= max_mps || mmp >= max_mmp){//Si no entra al if => todo. ok
 		if( mps >= max_mps){
 			enviar_mensaje("Se sobrepaso el maximo de prosesos en el sistema(mps).\n",cliente_sock);
@@ -241,6 +257,9 @@ int validar_mps_mmp(int cliente_sock){
 			return 1;
 		}
 	}
+	liberar_semaforo(semaforos,SEM_VAR_MMP);
+	liberar_semaforo(semaforos,SEM_VAR_MPS);
+
 	printf("mps y mmp ok\n");
 	return 0;
 }

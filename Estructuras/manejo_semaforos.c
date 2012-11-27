@@ -84,7 +84,7 @@ int inicializar_semaforos(int cant_semaforos_a_crear){
 		semctl (id_semaforo, i, SETVAL, &arg);
 	}
 
-	semctl(id_semaforo,16,SETALL,1);//Inicializa todos los semaforos en 1
+	semctl(id_semaforo,cant_semaforos_a_crear,SETALL,1);//Inicializa todos los semaforos en 1
 
 	return id_semaforo;
 }
