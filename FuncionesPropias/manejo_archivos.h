@@ -9,5 +9,7 @@
 #define MANEJO_ARCHIVOS_H_
 
 char * leer_archivo(char *nombre_archivo);
+int crear_archivo(char *nombre);
+int existe_el_archivo(char *nombre);
 
 #endif /* MANEJO_ARCHIVOS_H_ */

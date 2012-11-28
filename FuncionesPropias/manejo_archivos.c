@@ -31,3 +31,16 @@ char * leer_archivo(char *nombre_archivo){
 	return buffer;
 }
 
+int crear_archivo(char *nombre){
+	FILE * archivo;
+	if ( (archivo=fopen (nombre, "w+")) == NULL){
+		return -1;
+	}
+	return 0;
+}
+
+int existe_el_archivo(char *nombre){
+
+	return 0;//Existe
+}
+

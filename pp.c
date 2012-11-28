@@ -11,7 +11,7 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/sem.h>
-#include "Estructuras/manejo_semaforos.h"
+#include <semaphore.h>
 
 /*
  * Headers propios
@@ -23,6 +23,7 @@
 #include "FuncionesPropias/manejo_archivos.h"
 #include "Estructuras/proceso.h"
 #include "Estructuras/colaConeccionesDemoradas.h"
+#include "Log/manejo_log.h"
 /*
  * Prototipos
  */
@@ -34,6 +35,14 @@ int global_procer=0;
 int global_iot=0;
 //SEMAFOROS *************************************
 int semaforos;
+pthread_mutex_t mutexListaNuevos = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexListaReanudados = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexListaSuspendidos = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexListaBloqueados = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexListaFinQuantum = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexListaFinIO = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexListaListos = PTHREAD_MUTEX_INITIALIZER;
+
 //***************************
 
 //Variables globales del archivo de configuracion
@@ -74,21 +83,24 @@ void  SIGhandler(int);
 
 int main(int argc, char *argv[])
 {
-	//aux
-	cant_iot_disponibles=1;
    int i;
    pthread_t LTS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t STS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t PROCER_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
 
-   semaforos=inicializar_semaforos(1);
+
+   printf("El semaforo antes de INIT esta en %d\n",mutexListaNuevos.__data.__lock);
+   pthread_mutex_init(&mutexListaNuevos,NULL);
+   printf("El semaforo despues del INIT esta en %d\n",mutexListaNuevos.__data.__lock);
+
+   logx("PID=1","2","3","4");
 
    cargar_archivo_configuracion();
    printf("Cargue el archivo de configuracion\n");
 
    //CREACION DE LOS HILOS DEL PP.
    //TODO agregar validaciones a los hilos.
-   liberar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+   //liberar_semaforo(semaforos,SEM_LISTA_NUEVOS);
 
    printf("Creando hilo de LTS\n");
    pthread_create(&(LTS_hilo), NULL, LTS_funcion, NULL); // Creamos el thread LTS
@@ -252,5 +264,6 @@ void  SIGhandler(int sig)
 {
 	suspendido = 1;
 	printf("\nReceived a SIGUSR1.\n");
+	printf("USR1, suspendido=%d",suspendido);
 }
 

@@ -10,9 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_listas.h"
-#include "../Estructuras/manejo_semaforos.h"
 
 //Variables globales
 extern char *lpl;
@@ -30,7 +31,12 @@ extern unsigned int lpr;
 extern unsigned int finQ;
 extern unsigned int finIO;
 
-extern int semaforos;
+//Semaforos
+extern pthread_mutex_t mutexListaNuevos;
+extern pthread_mutex_t mutexListaListos;
+extern pthread_mutex_t mutexListaReanudados;
+extern pthread_mutex_t mutexListaFinQuantum;
+extern pthread_mutex_t mutexListaFinIO;
 //Prototipos
 void planificar(nodo_proceso**);
 nodo_proceso** planificarPorFIFO(nodo_proceso**);
@@ -49,43 +55,63 @@ void * STS_funcion (){
 
 			//TODO:implementar los semaforos de las listas restantes
 			//TODO: la prioridad maxima debe ser variable.
-			for (prioridad = 1; prioridad < 4; ++prioridad) {
+			for (prioridad = 1; prioridad < 5; ++prioridad) {
 				if(prioridad == lpn){
 					if (listaProcesosNuevos != NULL){
 						//TODO:Implementar semaforos
 						printf("Entre en esperar en STS,con semaforo\n");
-						esperar_semaforo(semaforos,SEM_LISTA_NUEVOS);
-						esperar_semaforo(semaforos,SEM_LISTA_LISTOS);
+
+						pthread_mutex_lock(&mutexListaListos);
+						pthread_mutex_lock(&mutexListaNuevos);
 						agregar_lista_de_procesos(listaProcesosListos,listaProcesosNuevos,prioridad);
-						liberar_semaforo(semaforos,SEM_LISTA_NUEVOS);
-						liberar_semaforo(semaforos,SEM_LISTA_LISTOS);
-						printf("Sali de esperar esperar en STS\n");
+						pthread_mutex_unlock(&mutexListaNuevos);
+						pthread_mutex_unlock(&mutexListaListos);
+						printf("Agregue los procesos de NUEVOS STS\n");
 					}
 				}
-				/*if (prioridad == lpr ){
+				if (prioridad == lpr ){
 					if (listaProcesosReanudados != NULL){
+						pthread_mutex_lock(&mutexListaListos);
+						pthread_mutex_lock(&mutexListaReanudados);
 						agregar_lista_de_procesos(listaProcesosListos,listaProcesosReanudados,prioridad);
+						pthread_mutex_unlock(&mutexListaReanudados);
+						pthread_mutex_unlock(&mutexListaListos);
+						printf("Agregue los procesos de REANUDADOS STS\n");
 					}
 				}
+
 				if (prioridad == finQ ){
 					if (listaFinQuantum != NULL){
+						pthread_mutex_lock(&mutexListaListos);
+						pthread_mutex_lock(&mutexListaFinQuantum);
 						agregar_lista_de_procesos(listaProcesosListos,listaFinQuantum,prioridad);
+						pthread_mutex_unlock(&mutexListaFinQuantum);
+						pthread_mutex_unlock(&mutexListaListos);
+						printf("Agregue los procesos de FIN DE QUANTUM STS\n");
 					}
 				}
+
 				if (prioridad == finIO){
 					if (listaFinIO != NULL){
+						pthread_mutex_lock(&mutexListaListos);
+						pthread_mutex_lock(&mutexListaFinIO);
 						agregar_lista_de_procesos(listaProcesosListos,listaFinIO,prioridad);
+						pthread_mutex_unlock(&mutexListaFinIO);
+						pthread_mutex_unlock(&mutexListaListos);
 					}
 				}
-				*/
+
 			}
-			mostrar_lista(listaProcesosListos);
+
 			printf("Estoy por planificar\n");
-			esperar_semaforo(semaforos,SEM_LISTA_LISTOS);
+			pthread_mutex_lock(&mutexListaListos);
+			//mostrar_lista(listaProcesosListos);
 			planificar(listaProcesosListos);
-			liberar_semaforo(semaforos,SEM_LISTA_LISTOS);
+			printf("Sali de planificar\n");
+			//mostrar_lista(listaProcesosListos);
+			pthread_mutex_unlock(&mutexListaListos);
 			printf("Libere el semaforo de listos\n");
-			mostrar_lista(listaProcesosListos);
+
 		}else{
 			sleep(1);
 		}
@@ -96,16 +122,16 @@ void * STS_funcion (){
 
 void planificar(nodo_proceso **listaAPlanificar){
 
-	if ( strcmp(lpl,"FIFO") ) {
+	if ( strcmp(lpl,"FIFO") == 0) {
 		planificarPorFIFO(listaAPlanificar);
 	}
-	if ( strcmp(lpl,"RR")) {
+	if ( strcmp(lpl,"RR") == 0) {
 		planificarPorRR(listaAPlanificar);
 	}
-	if ( strcmp(lpl,"PRI") ) {
+	if ( strcmp(lpl,"PRI") == 0) {
 		planificarPorPRI(listaAPlanificar);
 	}
-	if ( strcmp(lpl,"SPN") ) {
+	if ( strcmp(lpl,"SPN") == 0) {
 		// TODO: Llamar a la funcion correspondiente a este algoritmo
 	}
 }
@@ -123,9 +149,10 @@ nodo_proceso *planificarPorPRI(nodo_proceso **listaAPlanificar){
 }
 
 nodo_proceso *ordenaPorPrioridad(nodo_proceso *listaAPlanificar, int n) {
-	nodo_proceso *aux=(nodo_proceso *)malloc(sizeof(nodo_proceso));
-	nodo_proceso *siguiente=(nodo_proceso *)malloc(sizeof(nodo_proceso));
-	nodo_proceso *anterior=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	printf("Entre a ordenar por prioridad, LPL=%s\n",lpl);
+	nodo_proceso *aux;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *siguiente;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *anterior;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
 	int j=1;
 	int i;
 
@@ -153,6 +180,9 @@ nodo_proceso *ordenaPorPrioridad(nodo_proceso *listaAPlanificar, int n) {
 			j++;
 		}
 	}
+	//free(aux);
+	//free(siguiente);
+	//->free(anterior);
 	return listaAPlanificar;
 }
 
@@ -170,9 +200,8 @@ int cantidad_nodos(nodo_proceso **listaAPlanificar){
 }
 
 int las_listas_estan_vacias_sts(){
-	if( *listaProcesosNuevos == NULL ){
+	if( *listaProcesosNuevos == NULL && *listaProcesosReanudados == NULL && *listaFinQuantum == NULL && *listaFinIO == NULL){
 		return 0;
 	}
-	//TODO:Agregar las otras listas
 	return 1;
 }

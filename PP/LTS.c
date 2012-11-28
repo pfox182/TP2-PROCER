@@ -13,13 +13,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_listas.h"
 #include "../Estructuras/colaConeccionesDemoradas.h"
 #include "../Estructuras/manejo_listas_funciones.h"
 #include "../Estructuras/manejo_mensajes.h"
-#include "../Estructuras/manejo_semaforos.h"
 #include "LTS_suspendido.h"
 
 //aux
@@ -39,7 +39,9 @@ int validar_mps_mmp(int cliente_sock);
 extern unsigned int mps,mmp,max_mps,max_mmp; //Se usa extern para indicar que son variables globales de otro archivo
 extern unsigned int pid;
 extern int semaforos;
+extern pthread_mutex_t mutexListaNuevos;
 extern char* puerto;
+extern int lpn;
 
 //Listas
 extern nodo_proceso **listaProcesosNuevos;
@@ -170,21 +172,17 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 		printf("Pase la obtencio de socker demorado, que es %d\n",socket_demorado);
 		if( (retorno =validar_mps_mmp(socket_demorado)) == 0){
 			printf("El sokcet demorado es %d\n",socket_demorado);
-			recibir_mensaje(buffer,socket_demorado);
+			recibir_mensaje(&buffer,socket_demorado);
 			printf("Recibi el codigo del socket demorado\n");
 			proceso = crear_proceso(buffer,socket_demorado);
 
-			esperar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+			pthread_mutex_lock(&mutexListaNuevos);
 			agregar_proceso(listaProcesosNuevos,proceso);
-			liberar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+			pthread_mutex_unlock(&mutexListaNuevos);
 
-			esperar_semaforo(semaforos,SEM_VAR_MPS);
+			//TODO impolementar semaforos
 			mps++;
-			liberar_semaforo(semaforos,SEM_VAR_MPS);
-
-			esperar_semaforo(semaforos,SEM_VAR_MMP);
 			mmp++;
-			liberar_semaforo(semaforos,SEM_VAR_MMP);
 
 		}else{
 			if( retorno == 1){
@@ -197,27 +195,28 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 		FD_CLR(socket_demorado,&(*master));
 	}
 
-	printf("Pase la parte de socket demorado\n");
 	// if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
-	if(recibir_mensaje(buffer,cliente_sock) == 0){
+	if(recibir_mensaje(&buffer,cliente_sock) == 0){
 		 printf("Recibi el codigo del proceso nuevo, que es: %s\n",buffer);
 		 printf("El socket del cliente es %d\n",cliente_sock);
 		 //Creamos el proceso
-		 proceso = crear_proceso(buffer,cliente_sock);
+		proceso = crear_proceso(buffer,cliente_sock);
+		printf("Sali de crear proceso, pid= %d\n",proceso.pcb.pid);
 		if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 
 			printf("Sali del Validar\n");
-			esperar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+			printf("El semaforo antes de LOCK esta en %d\n",mutexListaNuevos.__data.__lock);
+			pthread_mutex_lock(&mutexListaNuevos);
+			printf("El semaforo despues del LOCK esta en %d\n",mutexListaNuevos.__data.__lock);
 			agregar_proceso(listaProcesosNuevos,proceso);
-			liberar_semaforo(semaforos,SEM_LISTA_NUEVOS);
+			printf("Agregue el proceso nuevo %d\n",proceso.pcb.pid);
+			pthread_mutex_unlock(&mutexListaNuevos);
+			printf("El semaforo despues del UNLOCK esta en %d\n",mutexListaNuevos.__data.__lock);
 
-			esperar_semaforo(semaforos,SEM_VAR_MPS);
+
+			//TODO impolementar semaforos
 			mps++;
-			liberar_semaforo(semaforos,SEM_VAR_MPS);
-
-			esperar_semaforo(semaforos,SEM_VAR_MMP);
 			mmp++;
-			liberar_semaforo(semaforos,SEM_VAR_MMP);
 
 			 printf("El proceso creado fue:\n");
 				printf("\tPID:%d\n",proceso.pcb.pid);
@@ -242,8 +241,7 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 }
 int validar_mps_mmp(int cliente_sock){
 
-	esperar_semaforo(semaforos,SEM_VAR_MPS);
-	esperar_semaforo(semaforos,SEM_VAR_MMP);
+	//TODO impolementar semaforos
 	if( mps >= max_mps || mmp >= max_mmp){//Si no entra al if => todo. ok
 		if( mps >= max_mps){
 			enviar_mensaje("Se sobrepaso el maximo de prosesos en el sistema(mps).\n",cliente_sock);
@@ -257,8 +255,6 @@ int validar_mps_mmp(int cliente_sock){
 			return 1;
 		}
 	}
-	liberar_semaforo(semaforos,SEM_VAR_MMP);
-	liberar_semaforo(semaforos,SEM_VAR_MPS);
 
 	printf("mps y mmp ok\n");
 	return 0;
@@ -268,22 +264,34 @@ proceso crear_proceso(char *buffer,int socket){
 	proceso proceso;
 	pcb pcb;
 
-	//TODO:IMPLEMENTAR SEMAFOROS
 	pcb.pid = ++pid;
 	pcb.pc = 0;
 
+	if( strlen(buffer) == 0){
+		printf("El buffer en crear_proceso esta vacio\n");
+	}
+
+	//TODO:hacer bzero
+	printf("Pase la primera parte de crear proceso\n");
 	pcb.codigo = (char *)malloc(strlen(buffer));
 	memcpy(pcb.codigo,buffer,strlen(buffer));
 
+	printf("Estoy por sacar funciones\n");
 	pcb.pila= sacar_funciones(buffer);
+	printf("Estoy por sacar datos\n");
 	pcb.datos = cargar_datos(buffer);
 
-	free(buffer);
+	printf("Estoy por hacer bzero\n");
+	bzero(buffer,strlen(buffer));
 
 	proceso.pcb = pcb;
-	proceso.prioridad = 0;
+	proceso.prioridad = lpn;
 	proceso.pila_ejecucion = (pila_ejecucion **)malloc(sizeof(pila_ejecucion));
+	printf("Hice la pila de ejecucion\n");
 	proceso.cliente_sock = socket;
+
+	printf("Free - crear_proceso\n");
+	free(buffer);
 	return proceso;
 }
 
@@ -292,6 +300,7 @@ data* cargar_datos(char *buffer){
 
 	data *puntero;
 	data *datos=(data *)malloc(sizeof(data)*26);//Antes data datos[26];
+	bzero(datos,sizeof(data)*26);
 	int i;
 	char j;
 	char *separacion;
@@ -350,12 +359,17 @@ stack* sacar_funciones(char *buffer){
 	char *resto=(char *)malloc(strlen(buffer));
 	memcpy(resto,buffer,strlen(buffer));
 	char *linea;
-	stack **lista_funciones=(stack **)malloc(sizeof(stack));;
+	stack **lista_funciones=(stack **)malloc(sizeof(stack));
+	//stack *lista_aux=(stack *)malloc(sizeof(stack));
+	//bzero(lista_aux,sizeof(stack));
+	//memcpy(lista_funciones,lista_aux,sizeof(stack));
+	*lista_funciones=NULL;
 
 	numero_linea = 0;
 
+	printf("Estoy por entrar al while\n");
 	while( resto != NULL){
-
+		printf("Estoy en el while =(\n");
 		linea = strtok(resto,"\n");
 		resto = strtok(NULL,"\0");
 		numero_linea++;
@@ -365,9 +379,11 @@ stack* sacar_funciones(char *buffer){
 		}
 
 	}
+	printf("Sali del while\n");
 
 	resto=NULL;
 	free(resto);
+
 	return *lista_funciones;
 }
 
@@ -381,9 +397,10 @@ void error(const char *msg)
 }
 
 void mostrar_funciones(stack *pila){
+	stack *aux=pila;
 	//Muestro vector
-	while( pila != NULL){
-		printf("Funcion %s , en la linea %d\n",(*pila).funcion,(*pila).linea);
-		pila=(*pila).siguiente;
+	while( aux != NULL && aux->linea < 30 ){
+		printf("Funcion %s , en la linea %d\n",aux->funcion,aux->linea);
+		aux=aux->siguiente;
 	}
 }

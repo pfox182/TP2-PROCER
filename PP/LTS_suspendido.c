@@ -13,9 +13,11 @@
 #include <unistd.h>
 #include "../Estructuras/manejo_listas.h"
 #include "../Estructuras/manejo_mensajes.h"
-#include "../Estructuras/manejo_semaforos.h"
 #include "../Estructuras/proceso.h"
 #include <sys/socket.h>
+#include <pthread.h>
+#include <semaphore.h>
+
 
 
 //Listas Globales
@@ -25,7 +27,9 @@ extern nodo_proceso **listaProcesosSuspendidos;
 //Variables Globales
 extern unsigned int mmp;
 extern unsigned int max_mmp;
-extern int semaforos;
+extern int lpr;
+extern pthread_mutex_t mutexListaSuspendidos;
+extern pthread_mutex_t mutexListaReanudados;
 
 //Prototipos
 int las_listas_estan_vacias_lts();
@@ -35,16 +39,20 @@ void *LTS_suspendido(){
 	while(1){
 		if ( las_listas_estan_vacias_lts() != 0 ){
 
+
 			proceso proceso;
-			stack aux;
+			stack *aux;
 			int i;
 			char *respuestaReanudo=(char *)malloc(strlen("si"));
 			char *numero=(char *)malloc(strlen("00000"));
 			char *var=(char *)malloc(sizeof(char));
 			char *id=(char *)malloc(strlen("00000"));
 			char *pc=(char *)malloc(strlen("00000"));
-			char *funcion=(char *)malloc(strlen("00000"));
+			char *funcion=(char *)malloc(strlen("0000000000"));
 			char *msjVariables=(char *)malloc(1024);//mirar tamaño
+
+			//TODO: HACER BZERO
+			//bzero(funcion,strlen("00000"));
 
 			strcpy(msjVariables,"El estado del proceso suspendido es:\n");
 			char template[]="------------------------------------------\n\n";
@@ -56,10 +64,9 @@ void *LTS_suspendido(){
 			char msjReanudo[]="Desea reanudar el proceso.(si/no):";
 			char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(MMP)";
 
-
-			esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
+			pthread_mutex_lock(&mutexListaSuspendidos);
 			proceso = sacar_proceso(listaProcesosSuspendidos);
-			liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
+			 pthread_mutex_unlock(&mutexListaSuspendidos);
 
 
 			strcat(msjVariables,template);
@@ -68,10 +75,12 @@ void *LTS_suspendido(){
 			strcat(msjVariables,template1);
 			sprintf(id,"%d",proceso.pcb.pid);
 			strcat(msjVariables,id);
+			strcat(msjVariables,"\n");
 			//PC
 			strcat(msjVariables,template2);
 			sprintf(pc,"%d",proceso.pcb.pc);
 			strcat(msjVariables,pc);
+			strcat(msjVariables,"\n");
 			//CODIGO
 			strcat(msjVariables,template3);
 			strcat(msjVariables,proceso.pcb.codigo);
@@ -94,14 +103,16 @@ void *LTS_suspendido(){
 			//FUNCIONES
 			strcat(msjVariables,template5);
 
-			aux=*proceso.pcb.pila;
-			while ( aux.siguiente != NULL ){
+			aux=proceso.pcb.pila;
+			printf("Entre en LTS_suspendidos\n");
+			while ( aux != NULL ){
 
-				sprintf(funcion,"%d",proceso.pcb.pila->linea);
+				sprintf(funcion,"%d",aux->linea);
 				strcat(funcion,",");
-				strcat(funcion,proceso.pcb.pila->funcion);
+				strcat(funcion,aux->funcion);
 				strcat(msjVariables,funcion);
-				aux.siguiente = proceso.pcb.pila->siguiente;
+				strcat(msjVariables,"\n");
+				aux = aux->siguiente;
 
 			}
 
@@ -113,29 +124,30 @@ void *LTS_suspendido(){
 
 
 			//Recibo la respuesta de msjReanudo
-			//recibir_mensaje(respuestaReanudo,proceso.cliente_sock);
+			recibir_mensaje(&respuestaReanudo,proceso.cliente_sock);
 
-			respuestaReanudo="si";
+			//respuestaReanudo="no";
 			if ( (strstr(respuestaReanudo,"si")) != NULL ){
 				if ( mmp < max_mmp ){
-					esperar_semaforo(semaforos,SEM_LISTA_REANUDADOS);
+					proceso.prioridad = lpr;
+					pthread_mutex_lock(&mutexListaReanudados);
 					agregar_proceso(listaProcesosReanudados,proceso);
-					liberar_semaforo(semaforos,SEM_LISTA_REANUDADOS);
+					pthread_mutex_unlock(&mutexListaReanudados);
 				}else{
-					esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
+					pthread_mutex_lock(&mutexListaSuspendidos);
 					agregar_proceso(listaProcesosSuspendidos,proceso);
-					liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
+					pthread_mutex_unlock(&mutexListaSuspendidos);
+
 					enviar_mensaje(msjMMP,proceso.cliente_sock);
 				}
 
 			}else{
-				esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
+				pthread_mutex_lock(&mutexListaSuspendidos);
 				agregar_proceso(listaProcesosSuspendidos,proceso);
-				liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
+				pthread_mutex_unlock(&mutexListaSuspendidos);
 			}
 
-		//Limpiar los string.
-
+		//TODO:Limpiar los string.
 
 
 

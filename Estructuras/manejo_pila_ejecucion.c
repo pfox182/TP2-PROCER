@@ -44,7 +44,7 @@ seccion sacar_primera_seccion(pila_ejecucion **pila){
 
 		seccion = primero->seccion;
 
-		free(primero);
+		//free(primero);
 	}
 
 	return seccion;

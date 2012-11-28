@@ -3,11 +3,13 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h> //Contiene la funcion sleep
+#include <semaphore.h>
+#include <pthread.h>
+
 #include "../FuncionesPropias/manejo_archivos.h"
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_pila_ejecucion.h"
 #include "../Estructuras/manejo_mensajes.h"
-#include "../Estructuras/manejo_semaforos.h"
 
 #include "PROCER_funciones.h"
 
@@ -20,7 +22,8 @@ int las_listas_estan_vacias_procer();
 extern unsigned int mmp;
 extern unsigned int mps;
 extern int suspendido;
-extern int semaforos;
+extern pthread_mutex_t mutexListaListos;
+extern pthread_mutex_t mutexListaSuspendidos;
 
 //Listas globales
 extern nodo_proceso **listaProcesosListos;
@@ -36,9 +39,9 @@ void * PROCER_funcion(){
 		if ( las_listas_estan_vacias_procer() != 0 ){
 
 
-			esperar_semaforo(semaforos,SEM_LISTA_LISTOS);
+			pthread_mutex_lock(&mutexListaListos);
 			proceso proceso=sacar_proceso(listaProcesosListos);
-			liberar_semaforo(semaforos,SEM_LISTA_LISTOS);
+			pthread_mutex_unlock(&mutexListaListos);
 
 			printf("Se saco el proceso PID:%d de listos\n",proceso.pcb.pid);
 			printf("El codigo es:\n%s\n",proceso.pcb.codigo);
@@ -58,11 +61,13 @@ void * PROCER_funcion(){
 				   printf("Se agrego por 1° vez la seccion PROGRAMA\n");
 			   }
 			   if( suspendido == 1){
-				   esperar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
-				   agregar_proceso(listaProcesosSuspendidos,proceso);
-				   liberar_semaforo(semaforos,SEM_LISTA_SUSPENDIDOS);
-				   printf("Agregue el proceso %d a Suspendidos\n",proceso.pcb.pid);
 				   suspendido = 0;
+				   pthread_mutex_lock(&mutexListaSuspendidos);
+				   agregar_proceso(listaProcesosSuspendidos,proceso);
+				   pthread_mutex_unlock(&mutexListaSuspendidos);
+				   printf("Agregue el proceso %d a Suspendidos\n",proceso.pcb.pid);
+				   printf("Se suspendio un proceso, suspendido=%d\n",suspendido);
+				   printf("suspendido=%d despues de meterle 0\n",suspendido);
 				   break;
 			   }else{//No se suspendio la ejecucion
 
@@ -99,17 +104,26 @@ void * PROCER_funcion(){
 						}else{
 							printf("Finalizo la ejecucion\n");
 
-							esperar_semaforo(semaforos,SEM_VAR_MMP);
+							//TODO impolementar semaforos
 							--mmp;
-							liberar_semaforo(semaforos,SEM_VAR_MMP);
-
-							esperar_semaforo(semaforos,SEM_VAR_MPS);
 							--mps;
-							liberar_semaforo(semaforos,SEM_VAR_MPS);
 
 							mostrar_datos(proceso.pcb.datos);
 							enviar_proceso_terminado(proceso);
-							liberar_proceso(&proceso);
+							//liberar_proceso(&proceso);
+								printf("Free - liberar_proceso\n");
+								//TODO:arreglar
+								//free(proceso.pila_ejecucion);
+								//printf("Libere la pila de ejecucion\n");
+								free(proceso.pcb.codigo);
+								printf("Libere el codigo\n");
+								free(proceso.pcb.datos);
+								printf("Libere los datos\n");
+								//free(proceso.pcb.pila);
+								//printf("Libere la pila\n");
+
+								close(proceso.cliente_sock);
+								printf("Cerre la conexion\n");
 							break;
 						}
 					}
@@ -154,6 +168,7 @@ int enviar_proceso_terminado(proceso proceso){
 }
 
 int liberar_proceso(proceso *proceso){
+	printf("Free - liberar_proceso\n");
 	free(proceso->pcb.codigo);
 	printf("Libere el codigo\n");
 	free(proceso->pcb.datos);

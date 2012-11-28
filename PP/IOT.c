@@ -12,8 +12,9 @@
 #include "../Estructuras/manejo_listas.h"
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_mensajes.h"
-#include "../Estructuras/manejo_semaforos.h"
 #include <sys/socket.h>
+#include <semaphore.h>
+#include <pthread.h>
 
 
 //PROTORIPOS
@@ -24,9 +25,11 @@ extern nodo_proceso **listaFinIO;
 extern nodo_entrada_salida  **listaBloqueados;
 
 //Variables globales
-extern int semaforos;
 extern int cant_iot_disponibles;
 extern char *espera_estandar_io;
+extern pthread_mutex_t mutexListaBloqueados;
+extern pthread_mutex_t mutexListaFinIO;
+extern int finIO;
 
 void * IOT_funcion(){
 	while(1){
@@ -39,31 +42,32 @@ void * IOT_funcion(){
 
 			instruccion_io instruccion;
 
-			//TODO:implementar semaforos
-			esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
+			pthread_mutex_lock(&mutexListaBloqueados);
 			instruccion=sacar_entrada_salida(listaBloqueados);
-			liberar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
+			pthread_mutex_unlock(&mutexListaBloqueados);
 
 			if( strstr(instruccion.instruccion,"imprimir") != NULL ){
 				printf("El socket del cliente es %d\n",instruccion.proceso.cliente_sock);
 				enviar_mensaje(instruccion.mensaje,instruccion.proceso.cliente_sock);
 				sleep(atoi(espera_estandar_io));
 
-				esperar_semaforo(semaforos,SEM_LISTA_FIN_IO);
+				instruccion.proceso.prioridad = finIO;
+				pthread_mutex_lock(&mutexListaFinIO);
 				agregar_proceso(listaFinIO,instruccion.proceso);
-				liberar_semaforo(semaforos,SEM_LISTA_FIN_IO);
+				pthread_mutex_unlock(&mutexListaFinIO);
 
 				mostrar_lista(listaFinIO);
 				//TODO:implementar semaforos
 				cant_iot_disponibles++;//Libero un IOT;
+
 			}else{
 				sleep(atoi(instruccion.mensaje));
-				//TODO:implementar semaforos
 				printf("El proceso a agregar es PID:%d\n",instruccion.proceso.pcb.pid);
 
-				esperar_semaforo(semaforos,SEM_LISTA_FIN_IO);
+				instruccion.proceso.prioridad = finIO;
+				pthread_mutex_lock(&mutexListaFinIO);
 				agregar_proceso(listaFinIO,instruccion.proceso);
-				liberar_semaforo(semaforos,SEM_LISTA_FIN_IO);
+				pthread_mutex_unlock(&mutexListaFinIO);
 
 				mostrar_lista(listaFinIO);
 				//TODO:implementar semaforos

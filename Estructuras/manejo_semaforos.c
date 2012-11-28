@@ -5,6 +5,7 @@
  *      Author: utnso
  */
 #include <sys/sem.h>
+#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -53,7 +54,7 @@ int inicializar_semaforos(int cant_semaforos_a_crear){
    // y de un entero cualquiera. Todos los procesos que quieran compartir este
    // semaforo, deben usar el mismo fichero y el mismo entero.
 
-	Clave = ftok ("/bin/ls", 33);
+	Clave = ftok ("/home/utnso/hola3", 0);
 	if (Clave == (key_t)-1)
 	{
 		printf("No puedo conseguir clave de semáforo\n");
@@ -84,7 +85,10 @@ int inicializar_semaforos(int cant_semaforos_a_crear){
 		semctl (id_semaforo, i, SETVAL, &arg);
 	}
 
-	semctl(id_semaforo,cant_semaforos_a_crear,SETALL,1);//Inicializa todos los semaforos en 1
+	for( i=0;i<cant_semaforos_a_crear;i++){
+		liberar_semaforo(id_semaforo,i);
+	}
+	//semctl(id_semaforo,cant_semaforos_a_crear,SETALL,1);//Inicializa todos los semaforos en 1
 
 	return id_semaforo;
 }

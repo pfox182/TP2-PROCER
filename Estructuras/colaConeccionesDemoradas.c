@@ -58,7 +58,6 @@ int sacar_conexion_demorada(coneccionesDemoradas **listaConexionesDemoradas){
 		*listaConexionesDemoradas = primero->siguiente;
 
 		socket_client = primero->socket_cliente;
-
 		free(primero);
 	}
 

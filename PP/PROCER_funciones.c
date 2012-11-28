@@ -6,15 +6,17 @@
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_listas.h"
 #include "../Estructuras/manejo_pila_ejecucion.h"
-#include "../Estructuras/manejo_semaforos.h"
 #include "PROCER_funciones.h"
+#include <semaphore.h>
+#include <pthread.h>
 
 //Variables globales
 extern char *lpl;
+extern int finQ;
 extern unsigned int quantum_max;
 extern char *espera_estandar;
 extern int cant_iot_disponibles;
-extern int semaforos;
+extern pthread_mutex_t mutexListaFinQuantum;
 
 //Listas globales
 extern nodo_entrada_salida **listaBloqueados;
@@ -23,17 +25,17 @@ extern nodo_proceso **listaFinQuantum;
 int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned int cant_instrucciones){
 	int fin=0;
 
-	esperar_semaforo(semaforos,SEM_VAR_LPL);
+	//TODO impolementar semaforos
 	if( strcmp(lpl,"RR") == 0){
 		if( cont_quantum >= quantum_max ){
-			esperar_semaforo(semaforos,SEM_LISTA_FIN_QUANTUM);
+			proceso.prioridad = finQ;
+			pthread_mutex_lock(&mutexListaFinQuantum);
 			agregar_proceso(listaFinQuantum,proceso);
-			liberar_semaforo(semaforos,SEM_LISTA_FIN_QUANTUM);
+			pthread_mutex_unlock(&mutexListaFinQuantum);
 			printf("Se sobrepaso el quantum\n");
 			fin = -1;
 		}
 	}
-	liberar_semaforo(semaforos,SEM_VAR_LPL);
 
 	if( proceso.pcb.pc > cant_instrucciones){
 		printf("Se sobrepaso el pc->%d cant_inst->%d\n",proceso.pcb.pc,cant_instrucciones);
@@ -293,9 +295,8 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 	asignar_valor(variable,valor_total,pcb.datos);
 	if( se_espero == 'n'){//Solo se espera si no se espero en ';'
 
-		esperar_semaforo(semaforos,SEM_VAR_ESPERA_ESTANDAR);
+		//TODO impolementar semaforos
 		sleep(atoi(espera_estandar));
-		liberar_semaforo(semaforos,SEM_VAR_ESPERA_ESTANDAR);
 	}
 	return 0;
 
@@ -428,9 +429,8 @@ int ejecutar_salto(char *tipo_de_salto,char *resto,pcb pcb,seccion *seccion_ejec
 		}
 	}
 
-	esperar_semaforo(semaforos,SEM_VAR_ESPERA_ESTANDAR);
+	//TODO impolementar semaforos
 	sleep(atoi(espera_estandar));
-	liberar_semaforo(semaforos,SEM_VAR_ESPERA_ESTANDAR);
 
 	return 0;
 }
@@ -478,9 +478,8 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	instruccion.instruccion="imprimir";
 	instruccion.mensaje=msj;
 
-	esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
+	//TODO impolementar semaforos
 	agregar_entrada_salida(listaBloqueados,instruccion);
-	liberar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
 
 	printf("Agregue a E/S\n");
 
@@ -501,26 +500,22 @@ int ejecutar_io(char *palabra,proceso proceso){
 	if( atoi(tipo) == BLOQUEANTE){
 		proceso.pcb.pc++;
 
-		esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
+		//TODO impolementar semaforos
 		agregar_entrada_salida(listaBloqueados,instruccion);
-		liberar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
 
 		printf("Agregue a E/S\n");
 	}else{
 
-		esperar_semaforo(semaforos,SEM_VAR_CANT_IOT_DISPONIBLES);
-
+		//TODO impolementar semaforos
 		if( cant_iot_disponibles > 0){
 			proceso.pcb.pc++;
-			esperar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
+			//TODO impolementar semaforos
 			agregar_primero_entrada_salida(listaBloqueados,instruccion);
-			liberar_semaforo(semaforos,SEM_LISTA_BLOQUEADOS);
 		}else{
 			printf("Error iot ocupados\n");
 			return -1;
 		}
 
-		liberar_semaforo(semaforos,SEM_VAR_CANT_IOT_DISPONIBLES);
 
 	}
 

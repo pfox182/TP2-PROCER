@@ -32,7 +32,7 @@ int enviar_mensaje(char* mensaje,int socket_client){
 
 }
 
-int recibir_mensaje(char* mensaje,int socket_client){
+int recibir_mensaje(char** mensaje,int socket_client){
 
 	int nbytes;
 	int header;
@@ -52,9 +52,9 @@ int recibir_mensaje(char* mensaje,int socket_client){
 
 		 printf("El header recibido es: %d \n",header);
 		 //Seteamos el tamaño del mensaje
-		 mensaje=(char *)realloc(mensaje,header);
-		 bzero(mensaje,header);
-		 if (( recvall(socket_client,mensaje,&header,0)) == -1){
+		 *mensaje=(char *)realloc(*mensaje,header);
+		 bzero(*mensaje,header);
+		 if (( recvall(socket_client,*mensaje,&header,0)) == -1){
 			 printf("Error al recibir datos del archivo");
 			 return -1;
 		 }
@@ -72,6 +72,7 @@ int recvall(int client_fd,char *buffer,int *header,int flag){
 
 	//Valido que halla suficiente espacio
 	if( sizeof(buffer) < bytes_left){
+		printf("Free - recvall\n");
 		free(buffer);
 		buffer=(char *)malloc(bytes_left+1);
 	}
