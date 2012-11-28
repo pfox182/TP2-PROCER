@@ -38,10 +38,15 @@ int validar_mps_mmp(int cliente_sock);
 //Variables globales
 extern unsigned int mps,mmp,max_mps,max_mmp; //Se usa extern para indicar que son variables globales de otro archivo
 extern unsigned int pid;
-extern pthread_mutex_t mutexListaNuevos;
-extern pthread_mutex_t mutexVarMaxMMP;
 extern char* puerto;
 extern int lpn;
+	//Semaforos
+extern pthread_mutex_t mutexListaNuevos;
+extern pthread_mutex_t mutexVarMaxMMP;
+extern pthread_mutex_t mutexVarMaxMPS;
+extern pthread_mutex_t mutexVarMMP;
+extern pthread_mutex_t mutexVarMPS;
+extern pthread_mutex_t mutexVarLPN;
 
 //Listas
 extern nodo_proceso **listaProcesosNuevos;
@@ -170,7 +175,7 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 	int socket_demorado;
 	if((socket_demorado=sacar_conexion_demorada(listaConeccionesDemoradas))>0){
 		printf("Pase la obtencio de socker demorado, que es %d\n",socket_demorado);
-		if( (retorno =validar_mps_mmp(socket_demorado)) == 0){
+		if( (retorno = validar_mps_mmp(socket_demorado)) == 0){
 			printf("El sokcet demorado es %d\n",socket_demorado);
 			recibir_mensaje(&buffer,socket_demorado);
 			printf("Recibi el codigo del socket demorado\n");
@@ -180,9 +185,7 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 			agregar_proceso(listaProcesosNuevos,proceso);
 			pthread_mutex_unlock(&mutexListaNuevos);
 
-			//TODO impolementar semaforos
-			mps++;
-			mmp++;
+
 
 		}else{
 			if( retorno == 1){
@@ -205,18 +208,19 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 		if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 
 			printf("Sali del Validar\n");
-			printf("El semaforo antes de LOCK esta en %d\n",mutexListaNuevos.__data.__lock);
+
 			pthread_mutex_lock(&mutexListaNuevos);
-			printf("El semaforo despues del LOCK esta en %d\n",mutexListaNuevos.__data.__lock);
 			agregar_proceso(listaProcesosNuevos,proceso);
 			printf("Agregue el proceso nuevo %d\n",proceso.pcb.pid);
 			pthread_mutex_unlock(&mutexListaNuevos);
-			printf("El semaforo despues del UNLOCK esta en %d\n",mutexListaNuevos.__data.__lock);
 
-
-			//TODO impolementar semaforos
+			pthread_mutex_lock(&mutexVarMPS);
 			mps++;
+			pthread_mutex_unlock(&mutexVarMPS);
+
+			pthread_mutex_lock(&mutexVarMMP);
 			mmp++;
+			pthread_mutex_unlock(&mutexVarMMP);
 
 			 printf("El proceso creado fue:\n");
 				printf("\tPID:%d\n",proceso.pcb.pid);
@@ -241,7 +245,9 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 }
 int validar_mps_mmp(int cliente_sock){
 
-	//TODO impolementar semaforos
+	//TODO: nose si hay que poner un semaforo tambien para MMP y MPS
+	pthread_mutex_lock(&mutexVarMaxMPS);
+	pthread_mutex_lock(&mutexVarMaxMMP);
 	if( mps >= max_mps || mmp >= max_mmp){//Si no entra al if => todo. ok
 		if( mps >= max_mps){
 			enviar_mensaje("Se sobrepaso el maximo de prosesos en el sistema(mps).\n",cliente_sock);
@@ -255,6 +261,8 @@ int validar_mps_mmp(int cliente_sock){
 			return 1;
 		}
 	}
+	pthread_mutex_unlock(&mutexVarMaxMMP);
+	pthread_mutex_unlock(&mutexVarMaxMPS);
 
 	printf("mps y mmp ok\n");
 	return 0;
@@ -271,9 +279,9 @@ proceso crear_proceso(char *buffer,int socket){
 		printf("El buffer en crear_proceso esta vacio\n");
 	}
 
-	//TODO:hacer bzero
 	printf("Pase la primera parte de crear proceso\n");
 	pcb.codigo = (char *)malloc(strlen(buffer));
+	bzero(pcb.codigo,strlen(buffer));
 	memcpy(pcb.codigo,buffer,strlen(buffer));
 
 	printf("Estoy por sacar funciones\n");
@@ -285,12 +293,15 @@ proceso crear_proceso(char *buffer,int socket){
 	bzero(buffer,strlen(buffer));
 
 	proceso.pcb = pcb;
+
+	pthread_mutex_lock(&mutexVarLPN);
 	proceso.prioridad = lpn;
+	pthread_mutex_unlock(&mutexVarLPN);
+
 	proceso.pila_ejecucion = (pila_ejecucion **)malloc(sizeof(pila_ejecucion));
-	printf("Hice la pila de ejecucion\n");
+	bzero(proceso.pila_ejecucion,sizeof(pila_ejecucion));
 	proceso.cliente_sock = socket;
 
-	printf("Free - crear_proceso\n");
 	free(buffer);
 	return proceso;
 }
