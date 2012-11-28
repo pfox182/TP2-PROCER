@@ -27,6 +27,7 @@
 /*
  * Prototipos
  */
+int comprobar_archivo_configuracion();
 int cargar_archivo_configuracion();
 void  SIGhandler(int sig);
 //aux
@@ -42,6 +43,20 @@ pthread_mutex_t mutexListaBloqueados = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexListaFinQuantum = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexListaFinIO = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexListaListos = PTHREAD_MUTEX_INITIALIZER;
+
+	//Variables modificables en tiempo de ejcucion
+pthread_mutex_t mutexVarMaxMMP = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarMaxMPS = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarMMP = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarMPS= PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarLPL= PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarLPN = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarLPR = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarFinQuantum = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarFinIO = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarSuspendido = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarEsperaEstandar = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarCantIOTDisponibles = PTHREAD_MUTEX_INITIALIZER;
 
 //***************************
 
@@ -88,10 +103,27 @@ int main(int argc, char *argv[])
    pthread_t STS_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
    pthread_t PROCER_hilo;//Declaracion del hilo de LTP ( Planificador a largo plazo )
 
-
-   printf("El semaforo antes de INIT esta en %d\n",mutexListaNuevos.__data.__lock);
+   //Inicializar Semaforos
    pthread_mutex_init(&mutexListaNuevos,NULL);
-   printf("El semaforo despues del INIT esta en %d\n",mutexListaNuevos.__data.__lock);
+   pthread_mutex_init(&mutexListaReanudados,NULL);
+   pthread_mutex_init(&mutexListaSuspendidos,NULL);
+   pthread_mutex_init(&mutexListaBloqueados,NULL);
+   pthread_mutex_init(&mutexListaFinQuantum,NULL);
+   pthread_mutex_init(&mutexListaFinIO,NULL);
+   pthread_mutex_init(&mutexListaListos,NULL);
+
+   pthread_mutex_init(&mutexVarMaxMMP,NULL);
+   pthread_mutex_init(&mutexVarMaxMPS,NULL);
+   pthread_mutex_init(&mutexVarMMP,NULL);
+   pthread_mutex_init(&mutexVarMPS,NULL);
+   pthread_mutex_init(&mutexVarLPL,NULL);
+   pthread_mutex_init(&mutexVarLPN,NULL);
+   pthread_mutex_init(&mutexVarLPR ,NULL);
+   pthread_mutex_init(&mutexVarFinQuantum,NULL);
+   pthread_mutex_init(&mutexVarFinIO,NULL);
+   pthread_mutex_init(&mutexVarSuspendido,NULL);
+   pthread_mutex_init(&mutexVarEsperaEstandar,NULL);
+   pthread_mutex_init(&mutexVarCantIOTDisponibles,NULL);
 
    logx("PID=1","2","3","4");
 
@@ -121,6 +153,7 @@ int main(int argc, char *argv[])
 
    //CAPTURAR LA SEÑAL SIGUSR1.
    	   while (1){
+   		   comprobar_archivo_configuracion();
    			signal(SIGUSR1, SIGhandler);
    		sleep(1);
    		}
@@ -129,15 +162,105 @@ int main(int argc, char *argv[])
    return 0;
 }
 
+int comprobar_archivo_configuracion(){
+	char *nombre_archivo="pp.conf";
+	char *texto_del_archivo = leer_archivo(nombre_archivo);
+	char *linea;
+	char *valor;
+
+	while( texto_del_archivo != NULL){
+		linea = strtok(texto_del_archivo,"\n");
+		texto_del_archivo = strtok(NULL,"\0");
+
+		if( strstr(linea,"mps")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL && max_mps!=atoi(valor)){
+				pthread_mutex_lock(&mutexVarMaxMPS);
+				max_mps=atoi(valor);
+				printf("Cambie el mps %d\n",max_mps);
+				pthread_mutex_unlock(&mutexVarMaxMPS);
+			}
+		}
+		if( strstr(linea,"mmp")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL && max_mmp!=atoi(valor)){
+				pthread_mutex_lock(&mutexVarMaxMMP);
+				max_mmp=atoi(valor);
+				pthread_mutex_unlock(&mutexVarMaxMMP);
+			}
+		}
+
+		if( strstr(linea,"lpl")){//Algoritmo de ordenamiento de lista de listos
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL && strcmp(lpl,valor)){
+				pthread_mutex_lock(&mutexVarLPL);
+				lpl=valor;
+				pthread_mutex_unlock(&mutexVarLPL);
+			}
+		}
+		if( strstr(linea,"lpn")){//Prioridad de un proceso NUEVO
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL && lpn!=atoi(valor)){
+				pthread_mutex_lock(&mutexVarLPN);
+				lpn=atoi(valor);
+				pthread_mutex_unlock(&mutexVarLPN);
+			}
+		}
+		if( strstr(linea,"lpr")){//Prioridad de un proceso REANUDADO
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL && lpr != atoi(valor)){
+				pthread_mutex_lock(&mutexVarLPR);
+				lpr=atoi(valor);
+				pthread_mutex_unlock(&mutexVarLPR);
+			}
+
+
+		}
+		if( strstr(linea,"finQ")){//Prioridad de un proceso de FIN QUANTUM
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL && finQ != atoi(valor)){
+				pthread_mutex_lock(&mutexVarFinQuantum);
+				finQ=atoi(valor);
+				pthread_mutex_unlock(&mutexVarFinQuantum);
+			}
+		}
+		if( strstr(linea,"finIO")){//Prioridad de un proceso de FIN E/S
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL && finQ != atoi(valor)){
+				pthread_mutex_lock(&mutexVarFinIO);
+				finIO=atoi(valor);
+				pthread_mutex_unlock(&mutexVarFinIO);
+			}
+		}
+		if( strstr(linea,"espera_estandar") && strstr(linea,"espera_estandar_io") == NULL){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL && strcmp(espera_estandar,valor)!=0){
+				pthread_mutex_lock(&mutexVarEsperaEstandar);
+				espera_estandar=valor;
+				pthread_mutex_unlock(&mutexVarEsperaEstandar);
+			}
+		}
+	}
+
+	return 0;
+}
+
 int cargar_archivo_configuracion(){
 	char *nombre_archivo="pp.conf";
 	char *texto_del_archivo = leer_archivo(nombre_archivo);
 	char *linea;
 	char *valor;
 
-
 	listaConeccionesDemoradas=(coneccionesDemoradas **)malloc(sizeof(coneccionesDemoradas));
-	bzero(listaConeccionesDemoradas,sizeof(coneccionesDemoradas));
+		bzero(listaConeccionesDemoradas,sizeof(coneccionesDemoradas));
 
 	listaFinIO=(nodo_proceso **)malloc(sizeof(nodo_proceso));
 	bzero(listaFinIO,sizeof(nodo_proceso));
@@ -172,7 +295,7 @@ int cargar_archivo_configuracion(){
 				mps=0;
 			}
 		}
-		if( strstr(linea,"mpp")){
+		if( strstr(linea,"mmp")){
 			valor = strtok(linea," ");
 			valor = strtok(NULL,";");
 			if( valor != NULL ){
@@ -208,6 +331,8 @@ int cargar_archivo_configuracion(){
 			if( valor != NULL ){
 				lpr=atoi(valor);
 			}
+
+
 		}
 		if( strstr(linea,"finQ")){//Prioridad de un proceso de FIN QUANTUM
 			valor = strtok(linea," ");
@@ -258,7 +383,6 @@ int cargar_archivo_configuracion(){
 
 	return 0;
 }
-
 // FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.
 void  SIGhandler(int sig)
 {
