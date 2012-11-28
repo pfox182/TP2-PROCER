@@ -22,8 +22,12 @@ int las_listas_estan_vacias_procer();
 extern unsigned int mmp;
 extern unsigned int mps;
 extern int suspendido;
+	//Semaforos
 extern pthread_mutex_t mutexListaListos;
 extern pthread_mutex_t mutexListaSuspendidos;
+extern pthread_mutex_t mutexVarSuspendido;
+extern pthread_mutex_t mutexVarMMP;
+extern pthread_mutex_t mutexVarMPS;
 
 //Listas globales
 extern nodo_proceso **listaProcesosListos;
@@ -61,6 +65,8 @@ void * PROCER_funcion(){
 				   printf("Se agrego por 1° vez la seccion PROGRAMA\n");
 			   }
 			   if( suspendido == 1){
+				   pthread_mutex_lock(&mutexVarSuspendido);
+
 				   suspendido = 0;
 				   pthread_mutex_lock(&mutexListaSuspendidos);
 				   agregar_proceso(listaProcesosSuspendidos,proceso);
@@ -68,6 +74,8 @@ void * PROCER_funcion(){
 				   printf("Agregue el proceso %d a Suspendidos\n",proceso.pcb.pid);
 				   printf("Se suspendio un proceso, suspendido=%d\n",suspendido);
 				   printf("suspendido=%d despues de meterle 0\n",suspendido);
+
+				   pthread_mutex_unlock(&mutexVarSuspendido);
 				   break;
 			   }else{//No se suspendio la ejecucion
 
@@ -104,26 +112,16 @@ void * PROCER_funcion(){
 						}else{
 							printf("Finalizo la ejecucion\n");
 
-							//TODO impolementar semaforos
+							pthread_mutex_lock(&mutexVarMMP);
 							--mmp;
+							pthread_mutex_unlock(&mutexVarMMP);
+							pthread_mutex_lock(&mutexVarMPS);
 							--mps;
+							pthread_mutex_unlock(&mutexVarMPS);
 
 							mostrar_datos(proceso.pcb.datos);
 							enviar_proceso_terminado(proceso);
-							//liberar_proceso(&proceso);
-								printf("Free - liberar_proceso\n");
-								//TODO:arreglar
-								//free(proceso.pila_ejecucion);
-								//printf("Libere la pila de ejecucion\n");
-								free(proceso.pcb.codigo);
-								printf("Libere el codigo\n");
-								free(proceso.pcb.datos);
-								printf("Libere los datos\n");
-								//free(proceso.pcb.pila);
-								//printf("Libere la pila\n");
-
-								close(proceso.cliente_sock);
-								printf("Cerre la conexion\n");
+							liberar_proceso(&proceso);
 							break;
 						}
 					}

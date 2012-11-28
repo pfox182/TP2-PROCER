@@ -17,6 +17,11 @@ extern unsigned int quantum_max;
 extern char *espera_estandar;
 extern int cant_iot_disponibles;
 extern pthread_mutex_t mutexListaFinQuantum;
+extern pthread_mutex_t mutexVarLPL;
+extern pthread_mutex_t mutexVarFinQuantum;
+extern pthread_mutex_t mutexListaBloqueados;
+extern pthread_mutex_t mutexVarEsperaEstandar;
+extern pthread_mutex_t mutexVarCantIOTDisponibles;
 
 //Listas globales
 extern nodo_entrada_salida **listaBloqueados;
@@ -25,17 +30,22 @@ extern nodo_proceso **listaFinQuantum;
 int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned int cant_instrucciones){
 	int fin=0;
 
-	//TODO impolementar semaforos
+	pthread_mutex_lock(&mutexVarLPL);
 	if( strcmp(lpl,"RR") == 0){
 		if( cont_quantum >= quantum_max ){
+			pthread_mutex_lock(&mutexVarFinQuantum);
 			proceso.prioridad = finQ;
+			pthread_mutex_unlock(&mutexVarFinQuantum);
+
 			pthread_mutex_lock(&mutexListaFinQuantum);
 			agregar_proceso(listaFinQuantum,proceso);
 			pthread_mutex_unlock(&mutexListaFinQuantum);
+
 			printf("Se sobrepaso el quantum\n");
 			fin = -1;
 		}
 	}
+	pthread_mutex_unlock(&mutexVarLPL);
 
 	if( proceso.pcb.pc > cant_instrucciones){
 		printf("Se sobrepaso el pc->%d cant_inst->%d\n",proceso.pcb.pc,cant_instrucciones);
@@ -295,8 +305,9 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 	asignar_valor(variable,valor_total,pcb.datos);
 	if( se_espero == 'n'){//Solo se espera si no se espero en ';'
 
-		//TODO impolementar semaforos
+		pthread_mutex_lock(&mutexVarEsperaEstandar);
 		sleep(atoi(espera_estandar));
+		pthread_mutex_unlock(&mutexVarEsperaEstandar);
 	}
 	return 0;
 
@@ -429,8 +440,9 @@ int ejecutar_salto(char *tipo_de_salto,char *resto,pcb pcb,seccion *seccion_ejec
 		}
 	}
 
-	//TODO impolementar semaforos
+	pthread_mutex_lock(&mutexVarEsperaEstandar);
 	sleep(atoi(espera_estandar));
+	pthread_mutex_unlock(&mutexVarEsperaEstandar);
 
 	return 0;
 }
@@ -478,8 +490,9 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	instruccion.instruccion="imprimir";
 	instruccion.mensaje=msj;
 
-	//TODO impolementar semaforos
+	pthread_mutex_lock(&mutexListaBloqueados);
 	agregar_entrada_salida(listaBloqueados,instruccion);
+	pthread_mutex_unlock(&mutexListaBloqueados);
 
 	printf("Agregue a E/S\n");
 
@@ -500,22 +513,24 @@ int ejecutar_io(char *palabra,proceso proceso){
 	if( atoi(tipo) == BLOQUEANTE){
 		proceso.pcb.pc++;
 
-		//TODO impolementar semaforos
+		pthread_mutex_lock(&mutexListaBloqueados);
 		agregar_entrada_salida(listaBloqueados,instruccion);
+		pthread_mutex_unlock(&mutexListaBloqueados);
 
 		printf("Agregue a E/S\n");
 	}else{
 
-		//TODO impolementar semaforos
+		pthread_mutex_lock(&mutexVarCantIOTDisponibles);
 		if( cant_iot_disponibles > 0){
 			proceso.pcb.pc++;
-			//TODO impolementar semaforos
+			pthread_mutex_lock(&mutexListaBloqueados);
 			agregar_primero_entrada_salida(listaBloqueados,instruccion);
+			pthread_mutex_unlock(&mutexListaBloqueados);
 		}else{
 			printf("Error iot ocupados\n");
 			return -1;
 		}
-
+		pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
 
 	}
 

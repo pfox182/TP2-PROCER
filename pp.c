@@ -386,8 +386,9 @@ int cargar_archivo_configuracion(){
 // FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.
 void  SIGhandler(int sig)
 {
+	pthread_mutex_lock(&mutexVarSuspendido);
 	suspendido = 1;
+	pthread_mutex_unlock(&mutexVarSuspendido);
 	printf("\nReceived a SIGUSR1.\n");
-	printf("USR1, suspendido=%d",suspendido);
 }
 
