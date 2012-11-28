@@ -38,8 +38,8 @@ int validar_mps_mmp(int cliente_sock);
 //Variables globales
 extern unsigned int mps,mmp,max_mps,max_mmp; //Se usa extern para indicar que son variables globales de otro archivo
 extern unsigned int pid;
-extern int semaforos;
 extern pthread_mutex_t mutexListaNuevos;
+extern pthread_mutex_t mutexVarMaxMMP;
 extern char* puerto;
 extern int lpn;
 
