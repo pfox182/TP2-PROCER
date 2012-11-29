@@ -36,37 +36,46 @@ int las_listas_estan_vacias_lts();
 
 
 void *LTS_suspendido(){
+
+
+	proceso proceso;
+	stack *aux;
+	int i;
+
+	char template[]="------------------------------------------\n\n";
+	char template1[]="ID=";
+	char template2[]="PD=";
+	char template3[]="\n- Estructura de codigo ----\n";
+	char template4[]="-------------------------\n\n- Estructura de Datos ----\n";
+	char template5[]="-------------------------\n\n- Estructura de Stack ----\n";
+	char msjReanudo[]="Desea reanudar el proceso.(si/no):";
+	char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(MMP)";
+
 	while(1){
 		if ( las_listas_estan_vacias_lts() != 0 ){
 
-
-			proceso proceso;
-			stack *aux;
-			int i;
 			char *respuestaReanudo=(char *)malloc(strlen("si"));
+			bzero(respuestaReanudo,strlen("si"));
 			char *numero=(char *)malloc(strlen("00000"));
+			bzero(numero,strlen("00000"));
 			char *var=(char *)malloc(sizeof(char));
+			bzero(var,sizeof(char));
 			char *id=(char *)malloc(strlen("00000"));
+			bzero(id,strlen("00000"));
 			char *pc=(char *)malloc(strlen("00000"));
+			bzero(pc,strlen("00000"));
 			char *funcion=(char *)malloc(strlen("0000000000"));
+			bzero(funcion,strlen("0000000000"));
 			char *msjVariables=(char *)malloc(1024);//mirar tamaño
+			bzero(msjVariables,sizeof(1024));
 
-			//TODO: HACER BZERO
-			//bzero(funcion,strlen("00000"));
 
 			strcpy(msjVariables,"El estado del proceso suspendido es:\n");
-			char template[]="------------------------------------------\n\n";
-			char template1[]="ID=";
-			char template2[]="PD=";
-			char template3[]="\n- Estructura de codigo ----\n";
-			char template4[]="-------------------------\n\n- Estructura de Datos ----\n";
-			char template5[]="-------------------------\n\n- Estructura de Stack ----\n";
-			char msjReanudo[]="Desea reanudar el proceso.(si/no):";
-			char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(MMP)";
+
 
 			pthread_mutex_lock(&mutexListaSuspendidos);
 			proceso = sacar_proceso(listaProcesosSuspendidos);
-			 pthread_mutex_unlock(&mutexListaSuspendidos);
+			pthread_mutex_unlock(&mutexListaSuspendidos);
 
 
 			strcat(msjVariables,template);
@@ -102,23 +111,25 @@ void *LTS_suspendido(){
 
 			//FUNCIONES
 			strcat(msjVariables,template5);
-
 			aux=proceso.pcb.pila;
-			printf("Entre en LTS_suspendidos\n");
+
 			while ( aux != NULL ){
-
-				sprintf(funcion,"%d",aux->linea);
-				strcat(funcion,",");
-				strcat(funcion,aux->funcion);
-				strcat(msjVariables,funcion);
-				strcat(msjVariables,"\n");
+				if ( aux->linea <= proceso.pcb.pc ){
+					sprintf(funcion,"%d",aux->linea);
+					strcat(funcion,",");
+					strcat(funcion,aux->funcion);
+					strcat(msjVariables,funcion);
+					strcat(msjVariables,"\n");
+				}
 				aux = aux->siguiente;
-
 			}
 
 
 			//Mensaje reanudacion
 			strcat(msjVariables,msjReanudo);
+
+			//realloc(*msjVariables,strlen(msjVariables));
+
 			//Envio mensaje con el estado proceso suspendido y pregunto si se reanuda.
 			enviar_mensaje(msjVariables,proceso.cliente_sock);
 
@@ -147,8 +158,14 @@ void *LTS_suspendido(){
 				pthread_mutex_unlock(&mutexListaSuspendidos);
 			}
 
-		//TODO:Limpiar los string.
-
+			//Libero Malloc
+			free(respuestaReanudo);
+			free(numero);
+			free(var);
+			free(id);
+			free(pc);
+			free(funcion);
+			free(msjVariables);
 
 
 		}else{

@@ -29,50 +29,60 @@ extern int cant_iot_disponibles;
 extern char *espera_estandar_io;
 extern pthread_mutex_t mutexListaBloqueados;
 extern pthread_mutex_t mutexListaFinIO;
+extern pthread_mutex_t mutexVarCantIOTDisponibles;
+
 extern int finIO;
 
 void * IOT_funcion(){
+
+	instruccion_io instruccion;
+
 	while(1){
 			if ( las_listas_estan_vacias_iot() != 0 ){
-			printf("Sali de espera en IOT\n");
-			//TODO: Productor-Consumidor implementar
+				printf("Sali de espera en IOT\n");
 
-			//TODO:implementar semaforos
-			cant_iot_disponibles--;//IOT Ocupado
 
-			instruccion_io instruccion;
+				pthread_mutex_lock(&mutexVarCantIOTDisponibles);
+				cant_iot_disponibles--;//IOT Ocupado
+				pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
 
-			pthread_mutex_lock(&mutexListaBloqueados);
-			instruccion=sacar_entrada_salida(listaBloqueados);
-			pthread_mutex_unlock(&mutexListaBloqueados);
 
-			if( strstr(instruccion.instruccion,"imprimir") != NULL ){
-				printf("El socket del cliente es %d\n",instruccion.proceso.cliente_sock);
-				enviar_mensaje(instruccion.mensaje,instruccion.proceso.cliente_sock);
-				sleep(atoi(espera_estandar_io));
+				pthread_mutex_lock(&mutexListaBloqueados);
+				instruccion=sacar_entrada_salida(listaBloqueados);
+				pthread_mutex_unlock(&mutexListaBloqueados);
 
-				instruccion.proceso.prioridad = finIO;
-				pthread_mutex_lock(&mutexListaFinIO);
-				agregar_proceso(listaFinIO,instruccion.proceso);
-				pthread_mutex_unlock(&mutexListaFinIO);
+				if( strstr(instruccion.instruccion,"imprimir") != NULL ){
 
-				mostrar_lista(listaFinIO);
-				//TODO:implementar semaforos
-				cant_iot_disponibles++;//Libero un IOT;
+					enviar_mensaje(instruccion.mensaje,instruccion.proceso.cliente_sock);
 
-			}else{
-				sleep(atoi(instruccion.mensaje));
-				printf("El proceso a agregar es PID:%d\n",instruccion.proceso.pcb.pid);
+					sleep(atoi(espera_estandar_io));
 
-				instruccion.proceso.prioridad = finIO;
-				pthread_mutex_lock(&mutexListaFinIO);
-				agregar_proceso(listaFinIO,instruccion.proceso);
-				pthread_mutex_unlock(&mutexListaFinIO);
+					instruccion.proceso.prioridad = finIO;
 
-				mostrar_lista(listaFinIO);
-				//TODO:implementar semaforos
+					pthread_mutex_lock(&mutexListaFinIO);
+					agregar_proceso(listaFinIO,instruccion.proceso);
+					pthread_mutex_unlock(&mutexListaFinIO);
+
+					//mostrar_lista(listaFinIO);
+
+				}else{
+
+					sleep(atoi(instruccion.mensaje));
+
+
+					instruccion.proceso.prioridad = finIO;
+
+					pthread_mutex_lock(&mutexListaFinIO);
+					agregar_proceso(listaFinIO,instruccion.proceso);
+					pthread_mutex_unlock(&mutexListaFinIO);
+
+					//mostrar_lista(listaFinIO);
+
+				}
+
+				pthread_mutex_lock(&mutexVarCantIOTDisponibles);
 				cant_iot_disponibles++;//Libero un IOT
-			}
+				pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
 
 		}else{
 			sleep(1);
