@@ -69,7 +69,6 @@ proceso crear_proceso(char *buffer,int socket){
 	proceso.cliente_sock = socket;
 
 	printf("NO ROMPI AUN\n");
-	//free(buffer);
 	printf("YA ROMPI AUN\n");
 	return proceso;
 }
@@ -119,8 +118,9 @@ data* cargar_datos(char *buffer){
 	puntero = &datos[0];
 	datos=realloc(datos,sizeof(data)*i);
 
-	resto=NULL;
-	free(resto);
+	if( resto != NULL ){
+		free(resto);
+	}
 
 	return puntero;
 }
@@ -153,8 +153,9 @@ stack* sacar_funciones(char *buffer){
 	}
 	printf("Sali del while\n");
 
-	resto=NULL;
-	free(resto);
+	if( resto != NULL ){
+		free(resto);
+	}
 
 	return *lista_funciones;
 }

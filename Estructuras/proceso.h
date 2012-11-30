@@ -56,6 +56,7 @@ struct instruccion_io{
 	proceso proceso;
 	char *instruccion;//imprimir o io
 	char *mensaje;
+	int espera;
 }typedef instruccion_io;
 
 struct nodo_entrada_salida{

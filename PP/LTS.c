@@ -180,7 +180,7 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 		 printf("El socket del cliente es %d\n",cliente_sock);
 		 //Creamos el proceso
 		proceso = crear_proceso(buffer,cliente_sock);
-
+		printf("Ya cree el proceso\n");
 		if ( buffer != NULL ){
 			free(buffer);
 		}

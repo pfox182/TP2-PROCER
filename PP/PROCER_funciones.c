@@ -519,6 +519,8 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	char *log_text=(char *)malloc(256);
 
 	instruccion_io instruccion;
+	char *variable;
+	int espera=-1;
 	int i;
 	int valor=buscar_valor_de_variable(resto[0],proceso.pcb);
 	char *numero=(char *)malloc(strlen("00000"));
@@ -526,8 +528,19 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	bzero(numero,strlen("00000"));
 	bzero(msj,strlen("IMPRIMIENDO VARIABLE a: 00000"));
 
+	if( resto[1] == ';'){
+		variable=strtok(resto,";");
+		resto=strtok(NULL,"\0");
+
+		//resto -> ;123
+		espera=atoi(resto);
+	}else{
+		variable=resto;
+	}
+
+	printf("El tiempo ha esperar es %d\n",espera);
 	strcpy(msj,"IMPRIMIENDO VARIABLE ");
-	strcat(msj,resto);
+	strcat(msj,variable);
 	strcat(msj,": ");
 	sprintf(numero,"%d",valor);
 
@@ -542,6 +555,7 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	instruccion.proceso=proceso;
 	instruccion.instruccion="imprimir";
 	instruccion.mensaje=msj;
+	instruccion.espera=espera;
 
 	pthread_mutex_lock(&mutexListaBloqueados);
 	agregar_entrada_salida(listaBloqueados,instruccion);
@@ -563,11 +577,25 @@ int ejecutar_io(char *palabra,proceso proceso){
 	char *numero=strtok(palabra,"(");
 	numero=strtok(NULL,",");
 	char *tipo=strtok(NULL,")");
+	palabra=strtok(NULL,"\0");
+
+	//io(1,1);
+	if( strstr(palabra,";") != NULL){
+		printf("Entre en el if de ';'\n");
+		numero=strtok(palabra,"\0");
+		printf("El resto antes del ++ es %s\n",numero);
+
+		//resto -> ;123
+		printf("El resto despues del ++ es %s\n",numero);
+	}else{
+		printf("NO Entre en el if de ';'\n");
+	}
 
 	instruccion.proceso=proceso;
 	instruccion.instruccion="io";
 	instruccion.mensaje=numero;//El mensaje tiene el tiempo de espera
 
+	instruccion.espera=atoi(numero);
 
 	if( atoi(tipo) == BLOQUEANTE){
 		proceso.pcb.pc++;
