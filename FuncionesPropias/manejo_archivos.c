@@ -19,28 +19,13 @@ char * leer_archivo(char *nombre_archivo){
 		printf("Error de apertura del archivo\n");
 	}
 
-
 	while(feof(archivo) == 0){
 		caracter = fgetc(archivo);
 		buffer[cant_caracteres]=caracter;
 		cant_caracteres++;
-		//fscanf(archivo,"%s", *buffer) != EOF //Otra forma de leer
 	}
 	buffer[cant_caracteres]='\0';
-	fclose(archivo);
+
 	return buffer;
-}
-
-int crear_archivo(char *nombre){
-	FILE * archivo;
-	if ( (archivo=fopen (nombre, "w+")) == NULL){
-		return -1;
-	}
-	return 0;
-}
-
-int existe_el_archivo(char *nombre){
-
-	return 0;//Existe
 }
 

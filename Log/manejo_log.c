@@ -16,13 +16,14 @@
 int logx(int proceso,char *hilo,unsigned long id_hilo, char *tipo, char *log){
 	char *nombre_archivo="/home/utnso/pp.log";
 	char *logeo=(char *)malloc(1024);
+	bzero(logeo,1024);
 	char *fecha = cGetDate();
 	char *hora=cGetTime();
 
-	char *proceso_pid=(char *)malloc(strlen("PID=000000"));
-	bzero(proceso_pid,strlen("PID=000000"));
-	char *id=(char *)malloc(strlen("/0000000000000000000000"));
-	bzero(id,strlen("/0000000000000000000000"));
+	char *proceso_pid=(char *)malloc(strlen("PID=000000")+1);
+	bzero(proceso_pid,strlen("PID=000000")+1);
+	char *id=(char *)malloc(strlen("/0000000000000000000000")+1);
+	bzero(id,strlen("/0000000000000000000000")+1);
 
 	sprintf(proceso_pid,"PID=%d",proceso);
 	sprintf(id," / %lu",id_hilo);
@@ -48,7 +49,7 @@ int logx(int proceso,char *hilo,unsigned long id_hilo, char *tipo, char *log){
 	strcat(logeo,log);
 	strcat(logeo," ]\n");
 
-	fwrite(logeo,sizeof(char),strlen(logeo),archivo);
+	fwrite(logeo,sizeof(char),strlen(logeo)+1,archivo);
 
 	fclose(archivo);
 	free(proceso_pid);

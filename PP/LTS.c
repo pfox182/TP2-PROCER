@@ -16,6 +16,7 @@
 #include <semaphore.h>
 
 #include "../Estructuras/proceso.h"
+#include "../Log/manejo_log.h"
 #include "../Estructuras/manejo_listas.h"
 #include "../Estructuras/colaConeccionesDemoradas.h"
 #include "../Estructuras/manejo_listas_funciones.h"
@@ -177,9 +178,9 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 			sprintf(log_text,"La prioridad del proceso es %d.",proceso.prioridad);
 			logx(proceso.pcb.pid,"LTS",id_hilo,"DEBUG",log_text);
 			//if( log_text != NULL ){ free(log_text);}
-			if ( buffer != NULL ){
-				free(buffer);
-			}
+//			if ( buffer != NULL ){
+//				free(buffer);
+//			}
 
 			pthread_mutex_lock(&mutexListaNuevos);
 			agregar_proceso(listaProcesosNuevos,proceso);

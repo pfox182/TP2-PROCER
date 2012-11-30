@@ -137,7 +137,7 @@ void * PROCER_funcion(){
 							break;
 						}
 					}
-					bzero(instruccion,strlen(instruccion));
+					bzero(instruccion,strlen(instruccion)+1);
 				}
 			}
 			cont_quantum=0;
@@ -150,7 +150,7 @@ void * PROCER_funcion(){
 
 int enviar_proceso_terminado(proceso proceso){
 	int i;
-	char *numero=(char *)malloc(strlen("00000"));
+	char *numero=(char *)malloc(strlen("00000")+1);
 	char *var=(char *)malloc(sizeof(char));
 	char *msjVariables=(char *)malloc(1024);//mirar tamaño
 

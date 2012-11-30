@@ -61,8 +61,8 @@ int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned i
 }
 
 unsigned int cant_lineas(const char *codigo){
-	char *resto=(char *)malloc(strlen(codigo));
-	memcpy(resto,codigo,strlen(codigo));
+	char *resto=(char *)malloc(strlen(codigo)+1);
+	memcpy(resto,codigo,strlen(codigo)+1);
 	unsigned int cant_lineas=0;
 
 	while( resto != NULL){
@@ -79,8 +79,8 @@ unsigned int cant_lineas(const char *codigo){
 char * leer_instruccion(char *codigo,unsigned int pc){
 	char *instruccion=NULL;
 	char *linea;
-	char *resto=(char *)malloc(strlen(codigo));
-	memcpy(resto,codigo,strlen(codigo));
+	char *resto=(char *)malloc(strlen(codigo)+1);
+	memcpy(resto,codigo,strlen(codigo)+1);
 	unsigned int linea_actual=0;
 
 	while( resto != NULL){
@@ -207,14 +207,14 @@ int ejecutar_funcion(char *nombre_funcion,proceso *proceso){
 	unsigned int posicion = buscar_inicio_de_funcion(nombre_funcion,(*proceso).pcb.codigo);
 	//char *instruccion;
 	char fin_funcion[30];
-	bzero(fin_funcion,strlen(fin_funcion));
+	bzero(fin_funcion,strlen(fin_funcion)+1);
 	strcpy(fin_funcion,"fin_funcion ");
 	strcat(fin_funcion,nombre_funcion);
 	unsigned int *cont_funcion=(unsigned int *)malloc(sizeof(unsigned int));
 	*cont_funcion=posicion;
 	seccion aux;
-	aux.nombre_seccion=(char *)malloc(strlen(fin_funcion));
-	bzero(aux.nombre_seccion,strlen(fin_funcion));
+	aux.nombre_seccion=(char *)malloc(strlen(fin_funcion)+1);
+	bzero(aux.nombre_seccion,strlen(fin_funcion)+1);
 	strcpy(aux.nombre_seccion,fin_funcion);
 	aux.contador_instruccion=cont_funcion;
 
@@ -224,8 +224,8 @@ int ejecutar_funcion(char *nombre_funcion,proceso *proceso){
 }
 unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
 	unsigned int posicion=0;
-	char *resto=(char *)malloc(strlen(codigo));
-	memcpy(resto,codigo,strlen(codigo));
+	char *resto=(char *)malloc(strlen(codigo)+1);
+	memcpy(resto,codigo,strlen(codigo)+1);
 	char *linea;
 	char comienzo_funcion[30];
 	strcpy(comienzo_funcion,"comienzo_funcion ");
@@ -404,7 +404,7 @@ int buscar_valor_de_variable(char letra,pcb pcb){
 char * extraer_numero(char *palabra,int posicion){//12+b o 12;
 	int i=posicion;
 	int j=0;
-	char *numero=(char *)malloc(strlen(palabra));
+	char *numero=(char *)malloc(strlen(palabra)+1);
 	bzero(numero,sizeof(numero));
 
 	if( es_un_numero(palabra[posicion]) == 0){
@@ -528,8 +528,8 @@ int ejecutar_salto(char *tipo_de_salto,char *resto,pcb pcb,seccion *seccion_ejec
 int buscar_posicion_etiqueta(char *etiqueta,char *codigo){
 	int posicion=0;
 	char *linea;
-	char *resto=(char *)malloc(strlen(codigo));
-	memcpy(resto,codigo,strlen(codigo));
+	char *resto=(char *)malloc(strlen(codigo)+1);
+	memcpy(resto,codigo,strlen(codigo)+1);
 
 	while(resto!=NULL){
 		linea=strtok(resto,"\n");
@@ -552,10 +552,10 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	int espera=-1;
 	int i;
 	int valor=buscar_valor_de_variable(resto[0],proceso.pcb);
-	char *numero=(char *)malloc(strlen("00000"));
-	char *msj=(char *)malloc(strlen("IMPRIMIENDO VARIABLE a: 00000"));
-	bzero(numero,strlen("00000"));
-	bzero(msj,strlen("IMPRIMIENDO VARIABLE a: 00000"));
+	char *numero=(char *)malloc(strlen("00000")+1);
+	char *msj=(char *)malloc(strlen("IMPRIMIENDO VARIABLE a: 00000")+1);
+	bzero(numero,strlen("00000")+1);
+	bzero(msj,strlen("IMPRIMIENDO VARIABLE a: 00000")+1);
 
 	if( resto[1] == ';'){
 		variable=strtok(resto,";");

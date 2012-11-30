@@ -44,9 +44,9 @@ proceso crear_proceso(char *buffer,int socket){
 	}
 
 	printf("Pase la primera parte de crear proceso\n");
-	pcb.codigo = (char *)malloc(strlen(buffer));
-	bzero(pcb.codigo,strlen(buffer));
-	memcpy(pcb.codigo,buffer,strlen(buffer));
+	pcb.codigo = (char *)malloc(strlen(buffer)+2);
+	bzero(pcb.codigo,strlen(buffer)+2);
+	memcpy(pcb.codigo,buffer,strlen(buffer)+2);
 
 	printf("Estoy por sacar funciones\n");
 	pcb.pila= sacar_funciones(buffer);
@@ -54,18 +54,22 @@ proceso crear_proceso(char *buffer,int socket){
 	pcb.datos = cargar_datos(buffer);
 
 	printf("Estoy por hacer bzero\n");
-	bzero(buffer,strlen(buffer));
+	bzero(buffer,strlen(buffer)+1);
 
+	printf("Hice bzero\n");
 	proceso.pcb = pcb;
 
 	pthread_mutex_lock(&mutexVarLPN);
 	proceso.prioridad = lpn;
 	pthread_mutex_unlock(&mutexVarLPN);
 
+	printf("Pase los semaforos \n");
 	proceso.prioridad_spn = 0;
 
 	proceso.pila_ejecucion = (pila_ejecucion **)malloc(sizeof(pila_ejecucion));
+	printf("Pase el maloc de pila ejecucion\n");
 	bzero(proceso.pila_ejecucion,sizeof(pila_ejecucion));
+	printf("Pase el bzero de pila ejecucion\n");
 	proceso.cliente_sock = socket;
 
 	printf("NO ROMPI AUN\n");
@@ -83,18 +87,13 @@ data* cargar_datos(char *buffer){
 	//char j;
 	char *separacion;
 	//int flag;
-	char *resto=(char *)malloc(strlen(buffer));
-	memcpy(resto,buffer,strlen(buffer));
+	printf("Estoy por hacer malloc en el cargar datos\n");
+	char *resto=(char *)malloc(strlen(buffer)+1);
+	printf("Hice malloc en el cargar datos\n");
+	memcpy(resto,buffer,strlen(buffer)+1);
+	printf("Estoy por hacer memcpy en el cargar datos\n");
 	char *linea;
 
-	//Inicializo el vector de variables
-	/*
-	for (i = 0,j='a'; i < 26; i++,j++)
-	{
-		datos[i].variable = j;
-		datos[i].valor = -1;
-	}
-	*/
 	while( resto != NULL){
 		linea = strtok(resto,"\n");
 		resto = strtok(NULL,"\0");
@@ -116,11 +115,14 @@ data* cargar_datos(char *buffer){
 	}
 
 	puntero = &datos[0];
+	printf("Estoy por hacer realloc en el cargar datos\n");
 	datos=realloc(datos,sizeof(data)*i);
+	printf("Hice el realloc en el cargar datos\n");
 
 	if( resto != NULL ){
 		free(resto);
 	}
+	printf("Hice el free en el cargar datos\n");
 
 	return puntero;
 }
@@ -128,8 +130,8 @@ data* cargar_datos(char *buffer){
 stack* sacar_funciones(char *buffer){
 	int numero_linea;
 	char *funcion;
-	char *resto=(char *)malloc(strlen(buffer));
-	memcpy(resto,buffer,strlen(buffer));
+	char *resto=(char *)malloc(strlen(buffer)+1);
+	memcpy(resto,buffer,strlen(buffer)+1);
 	char *linea;
 	stack **lista_funciones=(stack **)malloc(sizeof(stack));
 	//stack *lista_aux=(stack *)malloc(sizeof(stack));

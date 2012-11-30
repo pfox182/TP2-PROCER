@@ -15,7 +15,7 @@
 int enviar_mensaje(char* mensaje,int socket_client){
 
 		//Armamos el paquete a enviar al server
-		int header = strlen(mensaje);
+		int header = (strlen(mensaje) + 1);
 		printf("Header:%d\n",header);
 		//Enviamos el header para indicar el tamaño del paquete
 		if( send(socket_client,&header,sizeof(header),0) == -1){
@@ -71,11 +71,11 @@ int recvall(int client_fd,char *buffer,int *header,int flag){
 	int nbytes = 0;
 
 	//Valido que halla suficiente espacio
-	if( sizeof(buffer) < bytes_left){
-		printf("Free - recvall\n");
-		free(buffer);
-		buffer=(char *)malloc(bytes_left+1);
-	}
+//	if( sizeof(buffer) < bytes_left){
+//		printf("Free - recvall\n");
+//		free(buffer);
+//		buffer=(char *)malloc(bytes_left+1);
+//	}
 
 	while( total < *header){
 		nbytes = recv(client_fd,buffer+total, bytes_left,flag);

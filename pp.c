@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 
 int comprobar_archivo_configuracion(){
 	char *nombre_archivo="pp.conf";
-	char *texto_del_archivo = leer_archivo(nombre_archivo);
+	char *texto_del_archivo =leer_archivo(nombre_archivo);
 	char *linea;
 	char *valor;
 
@@ -261,12 +261,14 @@ int comprobar_archivo_configuracion(){
 		}
 	}
 
+	free(texto_del_archivo);
 	return 0;
 }
 
 int cargar_archivo_configuracion(){
-	char *nombre_archivo="pp.conf";
-	char *texto_del_archivo = leer_archivo(nombre_archivo);
+	char *nombre_archivo=(char *)malloc(strlen("pp.conf")+1);
+	memcpy(nombre_archivo,"pp.conf",strlen("pp.conf")+1);
+	char *texto_del_archivo =leer_archivo(nombre_archivo);
 	char *linea;
 	char *valor;
 
@@ -399,6 +401,7 @@ int cargar_archivo_configuracion(){
 
 	}
 
+	free(texto_del_archivo);
 	return 0;
 }
 // FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.
