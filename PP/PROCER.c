@@ -39,14 +39,13 @@ extern nodo_proceso **listaProcesosSuspendidos;
 //AUX
 void mostrar_datos(data *datos);
 
+pthread_t id_hilo_procer;
 
 void * PROCER_funcion(){
-
-	pthread_t id_hilo=pthread_self();
+	id_hilo_procer=pthread_self();
 
 	while(1){
 		if ( las_listas_estan_vacias_procer() != 0 ){
-			printf("La cantidad de instrucciones ejecutadas era: %d\n",cant_instrucciones_ejecutadas);
 			pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
 			cant_instrucciones_ejecutadas=0;
 			pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
@@ -58,10 +57,9 @@ void * PROCER_funcion(){
 
 			printf("Se saco el proceso PID:%d de listos\n",proceso.pcb.pid);//TODO:BORRAR
 
-			logx(proceso.pcb.pid,"PROCER",id_hilo,"LSCH","Se saco el proceso de la lista de Listos.");
+			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se saco el proceso de la lista de Listos.");
 
 			unsigned int cant_instrucciones = cant_lineas(proceso.pcb.codigo);
-			printf("La cantidad de instrucciones son %d\n",cant_instrucciones);
 			char *instruccion;
 			unsigned int cont_quantum = 0;
 			int retorno;
@@ -78,16 +76,14 @@ void * PROCER_funcion(){
 
 				   suspendido = 0;
 				   pthread_mutex_lock(&mutexVarMMP);
-				   printf("Antes de que Decremente mmp=%d\n",mmp);
 				   mmp--;
-				   printf("Decremente mmp=%d\n",mmp);
 				   pthread_mutex_unlock(&mutexVarMMP);
 
-				   logx(proceso.pcb.pid,"PROCER",id_hilo,"INFO","Se suspendio el proceso.");
+				   logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"INFO","Se suspendio el proceso.");
 				   pthread_mutex_lock(&mutexListaSuspendidos);
 				   agregar_proceso(listaProcesosSuspendidos,proceso);
 				   pthread_mutex_unlock(&mutexListaSuspendidos);
-				   logx(proceso.pcb.pid,"PROCER",id_hilo,"LSCH","Se agrego el proceso a la lista de Suspendidos.");
+				   logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la lista de Suspendidos.");
 
 				   pthread_mutex_unlock(&mutexVarSuspendido);
 				   break;
@@ -95,14 +91,9 @@ void * PROCER_funcion(){
 
 				   seccion_a_ejecutar=sacar_primera_seccion(proceso.pila_ejecucion);
 				   if( strcmp(seccion_a_ejecutar.nombre_seccion,"") == 0){
-					   logx(proceso.pcb.pid,"PROCER",id_hilo,"ERROR","Error al sacar la seccion a ejecutar, es nula.");
-					   printf("Error al sacar la seccion a ejecutar, es igual a NULL\n");//TODO:borrar
+					   logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"ERROR","Error al sacar la seccion a ejecutar, es nula.");
 					   break;
 				   }
-				   printf("Se extrajo { la seccion %s con contador=%d }\n",seccion_a_ejecutar.nombre_seccion,*seccion_a_ejecutar.contador_instruccion);
-
-					printf("El PC es %d\n",proceso.pcb.pc);
-					printf("Voy a leer la instruccion %d de la seccion %s\n",*seccion_a_ejecutar.contador_instruccion,seccion_a_ejecutar.nombre_seccion);
 					//Leemos la siguiente instruccion a ejecutar
 					instruccion = leer_instruccion(proceso.pcb.codigo,*seccion_a_ejecutar.contador_instruccion);
 					if( instruccion != NULL){
@@ -112,35 +103,37 @@ void * PROCER_funcion(){
 
 						if( strcmp(instruccion,seccion_a_ejecutar.nombre_seccion) != 0){//No es el fin de la seccion a ejecutar
 							agregar_a_pila_ejecucion(seccion_a_ejecutar,proceso.pila_ejecucion);
-							printf("Se volvio a agregar a la pila la seccion %s con contador=%d\n",seccion_a_ejecutar.nombre_seccion,*seccion_a_ejecutar.contador_instruccion);
 						}
 
 						if( strcmp(instruccion,"fin_programa") != 0){
 							retorno = ejecutar_instruccion(instruccion,&proceso,&seccion_a_ejecutar);
 							if( retorno == -1){
-								printf("Error al ejecutar instruccion:\n %s\n",instruccion);
+								char *error="Error al ejecutar instruccion: ";
+								strcat(error,instruccion);
+								logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"ERROR",error);
 							}
 							if( retorno == 1){//Quiere decir que se ejecuto una entrada/salida
-								printf("Nos fuimos a entrada/salida\n");
+								logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"INFO","Se fue a E/S.");
 								break;
 							}
 						}else{
-							printf("Finalizo la ejecucion\n");
+							logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"INFO","Finalizo la ejecucion");
 
 							pthread_mutex_lock(&mutexVarMMP);
-							printf("Antes de que Decremente mmp=%d\n",mmp);
 							--mmp;
-							printf("Decremente mmp=%d\n",mmp);
 							pthread_mutex_unlock(&mutexVarMMP);
 							pthread_mutex_lock(&mutexVarMPS);
-							printf("Antes de que Decremente mps=%d\n",mps);
 							--mps;
-							printf("Decremente mps=%d\n",mps);
 							pthread_mutex_unlock(&mutexVarMPS);
 
-							mostrar_datos(proceso.pcb.datos);
-							enviar_proceso_terminado(proceso);
+							//mostrar_datos(proceso.pcb.datos);
+							if ( enviar_proceso_terminado(proceso) == 0){
+								logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"INFO","Se enviao el estado del proceso al PI.");
+							}else{
+								logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"ERROR","Error al enviar el estado del proceso al PI.");
+							}
 							liberar_proceso(&proceso);
+							logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"INFO","Se libero la memoria del proceso.");
 							break;
 						}
 					}
@@ -180,13 +173,22 @@ int enviar_proceso_terminado(proceso proceso){
 	if ( enviar_mensaje(msjVariables,proceso.cliente_sock) == -1 ){
 		return -1;
 	}
+	if( numero != NULL ){
+		free(numero);
+	}
+	if( var != NULL ){
+		free(var);
+	}
+	if( msjVariables != NULL ){
+		free(msjVariables);
+	}
 
 	return 0;
 }
 
 int liberar_proceso(proceso *proceso){
 	printf("Free - liberar_proceso\n");
-	//free(proceso->pcb.codigo);
+	free(proceso->pcb.codigo);
 	printf("Libere el codigo\n");
 	free(proceso->pcb.datos);
 	printf("Libere los datos\n");

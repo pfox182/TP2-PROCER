@@ -11,12 +11,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "../Estructuras/manejo_listas.h"
-#include "../Estructuras/manejo_mensajes.h"
-#include "../Estructuras/proceso.h"
 #include <sys/socket.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include "../Estructuras/manejo_listas.h"
+#include "../Estructuras/manejo_mensajes.h"
+#include "../Estructuras/proceso.h"
+#include "../Log/manejo_log.h"
+
 
 
 
@@ -54,6 +56,8 @@ void *LTS_suspendido(){
 	char msjReanudo[]="Desea reanudar el proceso.(si/no):";
 	char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(mmp)";
 
+	pthread_t id_hilo=pthread_self();
+
 	while(1){
 		if ( las_listas_estan_vacias_lts() != 0 ){
 
@@ -76,10 +80,11 @@ void *LTS_suspendido(){
 			strcpy(msjVariables,"El estado del proceso suspendido es:\n");
 
 
+
 			pthread_mutex_lock(&mutexListaSuspendidos);
 			proceso = sacar_proceso(listaProcesosSuspendidos);
 			pthread_mutex_unlock(&mutexListaSuspendidos);
-
+			logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se saco el proceso de ListaSuspendidos.");
 
 			strcat(msjVariables,template);
 
@@ -139,12 +144,14 @@ void *LTS_suspendido(){
 
 			//Envio mensaje con el estado proceso suspendido y pregunto si se reanuda.
 			enviar_mensaje(msjVariables,proceso.cliente_sock);
+			logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","Se envio el estado del proceso suspendido y se pregunto si se queria reanudar.");
 
 
 			//Recibo la respuesta de msjReanudo
 			recibir_mensaje(&respuestaReanudo,proceso.cliente_sock);
+			logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","Se recibio el mensaje de reanudacion.");
 
-			//respuestaReanudo="no";
+
 			if ( (strstr(respuestaReanudo,"si")) != NULL ){
 				pthread_mutex_lock(&mutexVarMaxMMP);
 				pthread_mutex_lock(&mutexVarMMP);
@@ -153,9 +160,13 @@ void *LTS_suspendido(){
 					pthread_mutex_unlock(&mutexVarMMP);
 
 					proceso.prioridad = lpr;
+					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"DEBUG","Se cambio la prioridad del proceso para agregarlo en ListaProcesosReanudados.");
+
 					pthread_mutex_lock(&mutexListaReanudados);
 					agregar_proceso(listaProcesosReanudados,proceso);
 					pthread_mutex_unlock(&mutexListaReanudados);
+					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaProcesosReanudados.");
+
 				}else{
 					pthread_mutex_unlock(&mutexVarMaxMMP);
 					pthread_mutex_unlock(&mutexVarMMP);
@@ -163,14 +174,17 @@ void *LTS_suspendido(){
 					pthread_mutex_lock(&mutexListaSuspendidos);
 					agregar_proceso(listaProcesosSuspendidos,proceso);
 					pthread_mutex_unlock(&mutexListaSuspendidos);
+					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaSuspendidos.");
 
 					enviar_mensaje(msjMMP,proceso.cliente_sock);
+					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","Se envio el mensaje que se supero MMP.");
 				}
 
 			}else{
 				pthread_mutex_lock(&mutexListaSuspendidos);
 				agregar_proceso(listaProcesosSuspendidos,proceso);
 				pthread_mutex_unlock(&mutexListaSuspendidos);
+				logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaSuspendidos.");
 			}
 
 			//Libero Malloc

@@ -15,6 +15,8 @@
 #include <sys/socket.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include "../Log/manejo_log.h"
+
 
 
 //PROTORIPOS
@@ -37,52 +39,67 @@ void * IOT_funcion(){
 
 	instruccion_io instruccion;
 
+	pthread_t id_hilo=pthread_self();
+
 	while(1){
 			if ( las_listas_estan_vacias_iot() != 0 ){
-				printf("Sali de espera en IOT\n");
 
 
 				pthread_mutex_lock(&mutexVarCantIOTDisponibles);
 				cant_iot_disponibles--;//IOT Ocupado
 				pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
+				logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"DEBUG","Se ocupo un hilo IOT(cant_iot_disponibles).");
 
 
 				pthread_mutex_lock(&mutexListaBloqueados);
 				instruccion=sacar_entrada_salida(listaBloqueados);
 				pthread_mutex_unlock(&mutexListaBloqueados);
+				logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"LSCH","Se saco el proceso de ListaBloqueados.");
+
 
 				if( strstr(instruccion.instruccion,"imprimir") != NULL ){
+					logx(instruccion.proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","La instruccion es un imprimir.");
 
 					enviar_mensaje(instruccion.mensaje,instruccion.proceso.cliente_sock);
 
 					sleep(atoi(espera_estandar_io));
+					logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"INFO","Sleep imprimir espera_estandar_io");
+
 
 					instruccion.proceso.prioridad = finIO;
+					logx(instruccion.proceso.pcb.pid,"LTS_suspendido",id_hilo,"DEBUG","Se cambio la prioridad del proceso para agregarlo en ListaFinIO.");
 
 					pthread_mutex_lock(&mutexListaFinIO);
 					agregar_proceso(listaFinIO,instruccion.proceso);
 					pthread_mutex_unlock(&mutexListaFinIO);
+					logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"LSCH","Se agrego el proceso a ListaFinIO.");
 
-					//mostrar_lista(listaFinIO);
 
 				}else{
+					logx(instruccion.proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","La instruccion es un io().");
 
 					sleep(atoi(instruccion.mensaje));
+					logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"INFO","Sleep io().");
+
 
 
 					instruccion.proceso.prioridad = finIO;
+					logx(instruccion.proceso.pcb.pid,"LTS_suspendido",id_hilo,"DEBUG","Se cambio la prioridad del proceso para agregarlo en ListaFinIO.");
+
 
 					pthread_mutex_lock(&mutexListaFinIO);
 					agregar_proceso(listaFinIO,instruccion.proceso);
 					pthread_mutex_unlock(&mutexListaFinIO);
+					logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"LSCH","Se agrego el proceso a ListaFinIO.");
 
-					//mostrar_lista(listaFinIO);
 
 				}
 
 				pthread_mutex_lock(&mutexVarCantIOTDisponibles);
 				cant_iot_disponibles++;//Libero un IOT
 				pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
+				logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"DEBUG","Se libero un hilo IOT(cant_iot_disponibles).");
+
 
 		}else{
 			sleep(1);
