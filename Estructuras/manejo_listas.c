@@ -7,9 +7,11 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <pthread.h>
 #include "proceso.h"
 #include "manejo_listas.h"
-#include <string.h>
+#include "../Log/manejo_log.h"
 
 
 
@@ -145,4 +147,26 @@ void mostrar_lista(nodo_proceso **listaProcesos){
 	}
 	free(lista);
 
+}
+
+void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino,int prioridad){
+	proceso proceso;
+	nodo_proceso **listaAux = listaAgregar;
+	char *mensaje = (char*)malloc(256);
+
+	while( *listaAux != NULL){
+		proceso = sacar_proceso(listaAux);
+		proceso.prioridad = prioridad;
+		agregar_proceso(listaProcesos,proceso);
+
+		//Armo el mensaje a loguear.
+		strcat(mensaje,"Se paso el proceso de ");
+		strcat(mensaje,listaOrigen);
+		strcat(mensaje,"a ");
+		strcat(mensaje,listaDestino);
+		strcat(mensaje,".\n");
+
+		logx(proceso.pcb.pid,"STS",pthread_self(),"LSCH",mensaje);
+	}
+	free(mensaje);
 }

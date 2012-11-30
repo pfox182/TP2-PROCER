@@ -67,7 +67,6 @@ void * STS_funcion (){
 	while(1){
 		if ( las_listas_estan_vacias_sts() != 0 ){
 
-			//TODO:implementar los semaforos de las listas restantes
 			//TODO: la prioridad maxima debe ser variable.
 			for (prioridad = 1; prioridad < 5; ++prioridad) {
 				pthread_mutex_lock(&mutexVarLPN);
@@ -78,7 +77,7 @@ void * STS_funcion (){
 
 						pthread_mutex_lock(&mutexListaListos);
 						pthread_mutex_lock(&mutexListaNuevos);
-						agregar_lista_de_procesos(listaProcesosListos,listaProcesosNuevos,prioridad);
+						agregar_lista_de_procesos_log(listaProcesosListos,listaProcesosNuevos,"Nuevos","Listos",prioridad);
 						pthread_mutex_unlock(&mutexListaNuevos);
 						pthread_mutex_unlock(&mutexListaListos);
 						printf("Agregue los procesos de NUEVOS STS\n");
@@ -90,7 +89,7 @@ void * STS_funcion (){
 					if (listaProcesosReanudados != NULL){
 						pthread_mutex_lock(&mutexListaListos);
 						pthread_mutex_lock(&mutexListaReanudados);
-						agregar_lista_de_procesos(listaProcesosListos,listaProcesosReanudados,prioridad);
+						agregar_lista_de_procesos_log(listaProcesosListos,listaProcesosReanudados,"Reanudados","Listos",prioridad);
 						pthread_mutex_unlock(&mutexListaReanudados);
 						pthread_mutex_unlock(&mutexListaListos);
 						printf("Agregue los procesos de REANUDADOS STS\n");
@@ -102,7 +101,7 @@ void * STS_funcion (){
 					if (listaFinQuantum != NULL){
 						pthread_mutex_lock(&mutexListaListos);
 						pthread_mutex_lock(&mutexListaFinQuantum);
-						agregar_lista_de_procesos(listaProcesosListos,listaFinQuantum,prioridad);
+						agregar_lista_de_procesos_log(listaProcesosListos,listaFinQuantum,"FinQuantum","Listos",prioridad);
 						pthread_mutex_unlock(&mutexListaFinQuantum);
 						pthread_mutex_unlock(&mutexListaListos);
 						printf("Agregue los procesos de FIN DE QUANTUM STS\n");
@@ -114,7 +113,7 @@ void * STS_funcion (){
 					if (listaFinIO != NULL){
 						pthread_mutex_lock(&mutexListaListos);
 						pthread_mutex_lock(&mutexListaFinIO);
-						agregar_lista_de_procesos(listaProcesosListos,listaFinIO,prioridad);
+						agregar_lista_de_procesos_log(listaProcesosListos,listaFinIO,"FinIO","Listos",prioridad);
 						pthread_mutex_unlock(&mutexListaFinIO);
 						pthread_mutex_unlock(&mutexListaListos);
 					}
