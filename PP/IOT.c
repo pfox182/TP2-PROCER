@@ -44,6 +44,10 @@ void * IOT_funcion(){
 	while(1){
 			if ( las_listas_estan_vacias_iot() != 0 ){
 
+				pthread_mutex_lock(&mutexListaBloqueados);
+				instruccion=sacar_entrada_salida(listaBloqueados);
+				pthread_mutex_unlock(&mutexListaBloqueados);
+				logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"LSCH","Se saco el proceso de ListaBloqueados.");
 
 				pthread_mutex_lock(&mutexVarCantIOTDisponibles);
 				cant_iot_disponibles--;//IOT Ocupado
@@ -51,18 +55,13 @@ void * IOT_funcion(){
 				logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"DEBUG","Se ocupo un hilo IOT(cant_iot_disponibles).");
 
 
-				pthread_mutex_lock(&mutexListaBloqueados);
-				instruccion=sacar_entrada_salida(listaBloqueados);
-				pthread_mutex_unlock(&mutexListaBloqueados);
-				logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"LSCH","Se saco el proceso de ListaBloqueados.");
 
 
 				if( strstr(instruccion.instruccion,"imprimir") != NULL ){
 					logx(instruccion.proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","La instruccion es un imprimir.");
 
-					enviar_mensaje(instruccion.mensaje,instruccion.proceso.cliente_sock);
 
-					if (instruccion.espera <= 0){
+					if (instruccion.espera == -1){
 						sleep(atoi(espera_estandar_io));
 						logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"INFO","Sleep imprimir espera_estandar_io");
 
@@ -71,6 +70,7 @@ void * IOT_funcion(){
 						logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"INFO","Sleep imprimir instruccion.espera");
 					}
 
+					enviar_mensaje(instruccion.mensaje,instruccion.proceso.cliente_sock);
 
 					instruccion.proceso.prioridad = finIO;
 					logx(instruccion.proceso.pcb.pid,"LTS_suspendido",id_hilo,"DEBUG","Se cambio la prioridad del proceso para agregarlo en ListaFinIO.");
