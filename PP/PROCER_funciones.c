@@ -599,6 +599,8 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 }
 
 int ejecutar_io(char *palabra,proceso proceso){
+
+	printf("La intruccion es io: %s.\n",palabra);
 	char *log_text=(char *)malloc(256);
 
 	instruccion_io instruccion;
@@ -610,16 +612,14 @@ int ejecutar_io(char *palabra,proceso proceso){
 
 	//io(1,1);
 	if( palabra != NULL && *palabra == ';'){
-		numero=strtok(palabra,"\0");
+		numero=strtok(palabra,";");
 	}
 
 	instruccion.proceso=proceso;
 	instruccion.instruccion="io";
 	instruccion.mensaje=numero;//El mensaje tiene el tiempo de espera
-
 	instruccion.espera=atoi(numero);
 
-	printf("La intruccion %s es de tipo %s y segundos %s\n",palabra,tipo,numero);
 	if( atoi(tipo) == BLOQUEANTE){
 		proceso.pcb.pc++;
 
