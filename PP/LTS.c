@@ -52,14 +52,8 @@ void * LTS_funcion(void * var){
 	pthread_t LTS_suspendido_hilo;
 	pthread_t LTS_demorado_hilo;
 
-	pthread_t id_hilo=pthread_self();
-
-	printf("Creando hilo de LTS con id=%lu\n",id_hilo);
-
-
 	pthread_create(&(LTS_suspendido_hilo), NULL, LTS_suspendido, NULL); // Creamos el thread LTS suspendido
 	pthread_create(&(LTS_demorado_hilo), NULL, LTS_demorado, NULL); // Creamos el thread LTS demorado
-	printf("Soy el hilo de LTS_suspendido.\n");
 
 	server_socket(puerto);
 
@@ -170,58 +164,44 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 	int retorno;
 	char *buffer=(char *)malloc(1);
 	proceso proceso;
-
-	printf("Entre a administrar conexion con mps=%d y mmp=%d\n",mps,mmp);
-
+	pthread_t id_hilo=pthread_self();
 
 	// if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 	if(recibir_mensaje(&buffer,cliente_sock) == 0){
-		 printf("Recibi el codigo del proceso nuevo, que es: %s\n",buffer);
-		 printf("El socket del cliente es %d\n",cliente_sock);
-		 //Creamos el proceso
-		proceso = crear_proceso(buffer,cliente_sock);
-		printf("Ya cree el proceso\n");
-		if ( buffer != NULL ){
-			free(buffer);
-		}
-		printf("Sali de crear proceso, pid= %d\n",proceso.pcb.pid);
 		if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 
-			printf("Sali del Validar\n");
+			//Creamos el proceso
+			proceso = crear_proceso(buffer,cliente_sock);
+			logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","El proceso ha sido creado.");
+			char *log_text=(char *)malloc(127);
+			sprintf(log_text,"La prioridad del proceso es %d.",proceso.prioridad);
+			logx(proceso.pcb.pid,"LTS",id_hilo,"DEBUG",log_text);
+			//if( log_text != NULL ){ free(log_text);}
+			if ( buffer != NULL ){
+				free(buffer);
+			}
 
 			pthread_mutex_lock(&mutexListaNuevos);
 			agregar_proceso(listaProcesosNuevos,proceso);
-			printf("Agregue el proceso nuevo %d\n",proceso.pcb.pid);
 			pthread_mutex_unlock(&mutexListaNuevos);
+			logx(proceso.pcb.pid,"LTS",id_hilo,"LSCH","Agregue el proceso a la lista de Nuevos.");
 
 			pthread_mutex_lock(&mutexVarMPS);
-			printf("Antes de que Incremente mps=%d\n",mps);
 			mps++;
-			printf("Incremente mps=%d\n",mps);
 			pthread_mutex_unlock(&mutexVarMPS);
+			logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de procesos en el sistema.");
 
 			pthread_mutex_lock(&mutexVarMMP);
-			printf("Antes de que Incremente mmp=%d\n",mmp);
 			mmp++;
-			printf("Incremente mmp=%d\n",mmp);
 			pthread_mutex_unlock(&mutexVarMMP);
-
-			 printf("El proceso creado fue:\n");
-				printf("\tPID:%d\n",proceso.pcb.pid);
-				printf("\tPC:%d\n",proceso.pcb.pc);
-				printf("\tDatos:\n");
-				int i=0;
-				while(proceso.pcb.datos[i].variable){
-					printf("\t variable: %c valor:%d\n",proceso.pcb.datos[i].variable,proceso.pcb.datos[i].valor);
-					i++;
-				}
-				mostrar_funciones(proceso.pcb.pila);
-			 printf("\tPrioridad:%d\n",proceso.prioridad);
+			logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de multiprogramacion.");
 
 		 }else{
-			 //bzero(buffer,strlen(buffer));
 			 if( retorno == -1){
-				printf("Se produjo un error al validar el mmp y mps.\n");
+				 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo de proceso en el sistema.");
+			}
+			 if( retorno == -2){
+				 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo grado de multiprogramacion.");
 			}
 		 }
 	 }
@@ -243,15 +223,14 @@ int validar_mps_mmp(int cliente_sock){
 			pthread_mutex_unlock(&mutexVarMaxMPS);
 
 			enviar_mensaje("Se sobrepaso el maximo de prosesos en el sistema(mps).\n",cliente_sock);
-			printf("Sobrepaso de mps\n");
 			close(cliente_sock);
-			return 1;
+			return -1;
 		}else{
 			pthread_mutex_unlock(&mutexVarMPS);
 			pthread_mutex_unlock(&mutexVarMaxMPS);
 			enviar_mensaje("Se sobrepaso el maximo de multiprogramacion(mmp), se encolara su solicitud.\n",cliente_sock);
 			encolar_solicitud(listaConeccionesDemoradas,cliente_sock);
-			return 1;
+			return -2;
 		}
 
 	}else{
@@ -261,10 +240,6 @@ int validar_mps_mmp(int cliente_sock){
 		pthread_mutex_unlock(&mutexVarMaxMPS);
 	}
 
-
-
-
-	printf("mps y mmp ok\n");
 	return 0;
 }
 

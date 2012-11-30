@@ -114,7 +114,9 @@ int ejecutar_instruccion(char * instruccion,proceso *proceso,seccion *seccion_ej
 		}
 
 		if( es_una_variable(palabra) == 0){//De la forma a=1 o a=b+c
-			ejecutar_asignacion(palabra,(*proceso).pcb);
+			if ( ejecutar_asignacion(palabra,(*proceso)) == 1){
+				return 1;
+			}
 		}
 
 		if( es_una_funcion(palabra) == 0){//De la forma f10()
@@ -240,7 +242,7 @@ unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
 
 	return posicion;
 }
-int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
+int ejecutar_asignacion(char *palabra,proceso proceso){//ej: a+c;3
 	char *log_text=(char *)malloc(256);
 
 	pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
@@ -248,6 +250,7 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 	pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
 
 	int i,anterior;
+	pcb pcb=proceso.pcb;
 	char variable=palabra[0];
 
 
@@ -257,6 +260,7 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 
 	int valor_total=0;
 	int valor_aux=0;
+	int hice_un_io=0;
 	char *numero;
 	char se_espero='n';// n-> implica que no paso por ';' | s-> implica que si paso
 
@@ -271,7 +275,25 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 
 	//i=2 para saltear a la variable y al '='
 	for(i=2;i<strlen(palabra);i++){//Compruebo que no se halla ejecutado antes una io()s
-		if(es_un_caracter(palabra[i]) == 0){
+		printf("Valor_total es %d\n",valor_total);
+		//a=io(1,1)
+		if( palabra[i] == 'i' && palabra[++i] == 'o'){
+			printf("La palabra antes del ++ es %s\n",palabra);
+			palabra++;
+			palabra++;
+			printf("La palabra despues del ++ es %s\n",palabra);
+
+			if ( ejecutar_io(palabra,proceso) == 0 ){
+				valor_total=0;
+			}else{
+				valor_total=1;
+			}
+			hice_un_io=1;
+			break;
+		}
+
+		if(es_un_caracter(palabra[i]) == 0 ){
+			printf("Entre en es_un_caracter con %c\n",palabra[i]);
 			valor_aux=buscar_valor_de_variable(palabra[i],pcb);
 			if( palabra[i-1] == '-' ){
 				valor_total-=valor_aux;
@@ -281,6 +303,7 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 		}
 
 		if(es_un_numero(palabra[i]) == 0){
+			printf("Entre en es_un_numero\n");
 			numero=extraer_numero(palabra,i);
 			bzero(log_text,256);
 			sprintf(log_text,"El numero extraido es %s ,de la linea '%s'\n",numero,palabra);
@@ -310,13 +333,14 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 
 			bzero(log_text,256);
 			sprintf(log_text,"El numero extraido para ';' es %s ,para %s\n",numero,palabra);
-			logx(pcb.pid,"PROCER",id_hilo_procer,"ERROR",log_text);
+			logx(pcb.pid,"PROCER",id_hilo_procer,"DEBUG",log_text);
 
 			i+=(strlen(numero));//avanzo la cantidad de caracteres del numero
 			sleep(atoi(numero));
 		}
 	}
 
+	printf("En ejecutar aignacion -> El valor a asignar a %c es %d\n",variable,valor_total);
 	asignar_valor(variable,valor_total,pcb);
 	if( se_espero == 'n'){//Solo se espera si no se espero en ';'
 
@@ -326,12 +350,17 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 	}
 
 	//if(log_text != NULL){free(log_text);}
-	return 0;
+	if (hice_un_io == 0){
+		return 0;
+	}else{
+		return 1;
+	}
 
 }
 int asignar_valor(char variable,int valor,pcb pcb){
 	char *log_text=(char *)malloc(256);
 
+	printf("En asignar_valor -> El valor a asignar a %c es %d\n",variable,valor);
 	data *datos=pcb.datos;
 	int i;
 	for(i=0;datos[i].variable;i++){
@@ -580,15 +609,8 @@ int ejecutar_io(char *palabra,proceso proceso){
 	palabra=strtok(NULL,"\0");
 
 	//io(1,1);
-	if( strstr(palabra,";") != NULL){
-		printf("Entre en el if de ';'\n");
+	if( palabra != NULL && *palabra == ';'){
 		numero=strtok(palabra,"\0");
-		printf("El resto antes del ++ es %s\n",numero);
-
-		//resto -> ;123
-		printf("El resto despues del ++ es %s\n",numero);
-	}else{
-		printf("NO Entre en el if de ';'\n");
 	}
 
 	instruccion.proceso=proceso;
@@ -597,6 +619,7 @@ int ejecutar_io(char *palabra,proceso proceso){
 
 	instruccion.espera=atoi(numero);
 
+	printf("La intruccion %s es de tipo %s y segundos %s\n",palabra,tipo,numero);
 	if( atoi(tipo) == BLOQUEANTE){
 		proceso.pcb.pc++;
 
@@ -610,6 +633,7 @@ int ejecutar_io(char *palabra,proceso proceso){
 		logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la lista de Bloqueados.");
 
 		logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"DEBUG","El proceso se fue a E/S.");
+		return 0;
 	}else{
 		bzero(log_text,256);
 		sprintf(log_text,"Se recibio una instruccion de io no bloqueante de %s segundos.",numero);
@@ -633,6 +657,7 @@ int ejecutar_io(char *palabra,proceso proceso){
 			enviar_mensaje("Error todos los hilos de IOT estan ocupados.",proceso.cliente_sock);
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"ERROR","Error todos los hilos de IOT estan ocupados.");
 			//if( log_text != NULL){free(log_text);}
+			printf("Esta ocupado el hilo de IOT\n");
 			return -1;
 		}
 

@@ -29,7 +29,7 @@ int es_un_imprimir(char* palabra);
 int es_un_io(char* palabra);
 int ejecutar_funcion(char *nombre_funcion,proceso *proceso);
 unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo);
-int ejecutar_asignacion(char *palabra,pcb pcb);
+int ejecutar_asignacion(char *palabra,proceso proceso);
 int asignar_valor(char variable,int valor,pcb pcb);
 char * extraer_numero(char *palabran,int posicion);
 int buscar_valor_de_variable(char letra,pcb pcb);
