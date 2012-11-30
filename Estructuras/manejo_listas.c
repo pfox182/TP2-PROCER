@@ -125,14 +125,13 @@ instruccion_io sacar_entrada_salida(nodo_entrada_salida **lista_bloqueados){
 	return instruccion;
 }
 
-void agregar_lista_de_procesos(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,int prioridad){
+void agregar_lista_de_procesos(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar){
 	proceso proceso;
 	nodo_proceso **listaAux = listaAgregar;
 
 	//TODO:Implementar logs para los cambios de listas
 	while( *listaAux != NULL){
 		proceso = sacar_proceso(listaAux);
-		proceso.prioridad = prioridad;
 		agregar_proceso(listaProcesos,proceso);
 	}
 }
@@ -149,7 +148,7 @@ void mostrar_lista(nodo_proceso **listaProcesos){
 
 }
 
-void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino,int prioridad){
+void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino){
 	proceso proceso;
 	nodo_proceso **listaAux = listaAgregar;
 	char *mensaje = (char*)malloc(1024);
@@ -158,7 +157,6 @@ void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **
 
 	while( *listaAux != NULL){
 		proceso = sacar_proceso(listaAux);
-		proceso.prioridad = prioridad;
 		agregar_proceso(listaProcesos,proceso);
 
 		//Armo el mensaje a loguear.

@@ -77,7 +77,7 @@ void * STS_funcion (){
 
 						pthread_mutex_lock(&mutexListaListos);
 						pthread_mutex_lock(&mutexListaNuevos);
-						agregar_lista_de_procesos_log(listaProcesosListos,listaProcesosNuevos,"Nuevos","Listos",prioridad);
+						agregar_lista_de_procesos_log(listaProcesosListos,listaProcesosNuevos,"Nuevos","Listos");
 						pthread_mutex_unlock(&mutexListaNuevos);
 						pthread_mutex_unlock(&mutexListaListos);
 						printf("Agregue los procesos de NUEVOS STS\n");
@@ -89,7 +89,7 @@ void * STS_funcion (){
 					if (listaProcesosReanudados != NULL){
 						pthread_mutex_lock(&mutexListaListos);
 						pthread_mutex_lock(&mutexListaReanudados);
-						agregar_lista_de_procesos_log(listaProcesosListos,listaProcesosReanudados,"Reanudados","Listos",prioridad);
+						agregar_lista_de_procesos_log(listaProcesosListos,listaProcesosReanudados,"Reanudados","Listos");
 						pthread_mutex_unlock(&mutexListaReanudados);
 						pthread_mutex_unlock(&mutexListaListos);
 						printf("Agregue los procesos de REANUDADOS STS\n");
@@ -101,7 +101,7 @@ void * STS_funcion (){
 					if (listaFinQuantum != NULL){
 						pthread_mutex_lock(&mutexListaListos);
 						pthread_mutex_lock(&mutexListaFinQuantum);
-						agregar_lista_de_procesos_log(listaProcesosListos,listaFinQuantum,"FinQuantum","Listos",prioridad);
+						agregar_lista_de_procesos_log(listaProcesosListos,listaFinQuantum,"FinQuantum","Listos");
 						pthread_mutex_unlock(&mutexListaFinQuantum);
 						pthread_mutex_unlock(&mutexListaListos);
 						printf("Agregue los procesos de FIN DE QUANTUM STS\n");
@@ -113,7 +113,7 @@ void * STS_funcion (){
 					if (listaFinIO != NULL){
 						pthread_mutex_lock(&mutexListaListos);
 						pthread_mutex_lock(&mutexListaFinIO);
-						agregar_lista_de_procesos_log(listaProcesosListos,listaFinIO,"FinIO","Listos",prioridad);
+						agregar_lista_de_procesos_log(listaProcesosListos,listaFinIO,"FinIO","Listos");
 						pthread_mutex_unlock(&mutexListaFinIO);
 						pthread_mutex_unlock(&mutexListaListos);
 					}

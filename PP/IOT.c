@@ -72,9 +72,6 @@ void * IOT_funcion(){
 
 					enviar_mensaje(instruccion.mensaje,instruccion.proceso.cliente_sock);
 
-					instruccion.proceso.prioridad = finIO;
-					logx(instruccion.proceso.pcb.pid,"LTS_suspendido",id_hilo,"DEBUG","Se cambio la prioridad del proceso para agregarlo en ListaFinIO.");
-
 					pthread_mutex_lock(&mutexListaFinIO);
 					agregar_proceso(listaFinIO,instruccion.proceso);
 					pthread_mutex_unlock(&mutexListaFinIO);
@@ -87,10 +84,6 @@ void * IOT_funcion(){
 
 					sleep(instruccion.espera);
 					logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"INFO","Sleep io() instruccion.espera.");
-
-
-					instruccion.proceso.prioridad = finIO;
-					logx(instruccion.proceso.pcb.pid,"LTS_suspendido",id_hilo,"DEBUG","Se cambio la prioridad del proceso para agregarlo en ListaFinIO.");
 
 
 					pthread_mutex_lock(&mutexListaFinIO);

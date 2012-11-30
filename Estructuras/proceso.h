@@ -66,7 +66,7 @@ struct nodo_entrada_salida{
 
 
 //PROTOTIPOS
-proceso crear_proceso(char *buffer,int socket);
+proceso crear_proceso(char *buffer,char *prioridad,int socket);
 data* cargar_datos(char *buffer);
 void error(const char *msg);
 stack* sacar_funciones(char *buffer);

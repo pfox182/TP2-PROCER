@@ -18,11 +18,6 @@
 #include "../Estructuras/manejo_listas_funciones.h"
 #include "../Estructuras/manejo_mensajes.h"
 
-//Prototipos de funcion
-proceso crear_proceso(char *buffer,int socket);
-data* cargar_datos(char *buffer);
-void error(const char *msg);
-stack* sacar_funciones(char *buffer);
 
 //Variables globales
 //TODO:semaforo pid
@@ -32,7 +27,7 @@ extern int lpn;
 extern pthread_mutex_t mutexVarLPN;
 
 
-proceso crear_proceso(char *buffer,int socket){
+proceso crear_proceso(char *buffer,char *prioridad,int socket){
 	proceso proceso;
 	pcb pcb;
 
@@ -43,37 +38,27 @@ proceso crear_proceso(char *buffer,int socket){
 		printf("El buffer en crear_proceso esta vacio\n");
 	}
 
-	printf("Pase la primera parte de crear proceso\n");
 	pcb.codigo = (char *)malloc(strlen(buffer)+2);
 	bzero(pcb.codigo,strlen(buffer)+2);
 	memcpy(pcb.codigo,buffer,strlen(buffer)+2);
 
-	printf("Estoy por sacar funciones\n");
 	pcb.pila= sacar_funciones(buffer);
-	printf("Estoy por sacar datos\n");
 	pcb.datos = cargar_datos(buffer);
 
-	printf("Estoy por hacer bzero\n");
 	bzero(buffer,strlen(buffer)+1);
 
-	printf("Hice bzero\n");
 	proceso.pcb = pcb;
 
 	pthread_mutex_lock(&mutexVarLPN);
-	proceso.prioridad = lpn;
+	proceso.prioridad = atoi(prioridad);
 	pthread_mutex_unlock(&mutexVarLPN);
 
-	printf("Pase los semaforos \n");
 	proceso.prioridad_spn = 0;
 
 	proceso.pila_ejecucion = (pila_ejecucion **)malloc(sizeof(pila_ejecucion));
-	printf("Pase el maloc de pila ejecucion\n");
 	bzero(proceso.pila_ejecucion,sizeof(pila_ejecucion));
-	printf("Pase el bzero de pila ejecucion\n");
 	proceso.cliente_sock = socket;
 
-	printf("NO ROMPI AUN\n");
-	printf("YA ROMPI AUN\n");
 	return proceso;
 }
 

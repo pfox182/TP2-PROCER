@@ -36,6 +36,9 @@ extern nodo_proceso **listaProcesosNuevos;
 
 void * LTS_demorado(void * var){
 	char *buffer_2=(char *)malloc(1);
+	bzero(buffer_2,1);
+	char *prioridad=(char *)malloc(1);
+	bzero(prioridad,1);
 
 	while(1){
 		if(  lista_esta_vacia_LTS_demorado() != 0 ){
@@ -46,12 +49,10 @@ void * LTS_demorado(void * var){
 
 			if((socket_demorado=sacar_conexion_demorada(listaConeccionesDemoradas))>0){
 				if( (retorno = validar_mps_mmp_demorado(socket_demorado)) == 0){
-					printf("Valide el socket demorado exitosamente\n");
 					enviar_mensaje("Enviame el codigo\n",socket_demorado);
-					printf("El sokcet demorado es %d\n",socket_demorado);
 					recibir_mensaje(&buffer_2,socket_demorado);
-					printf("Recibi el codigo del socket demorado\n");
-					proceso = crear_proceso(buffer_2,socket_demorado);
+					recibir_mensaje(&prioridad,socket_demorado);
+					proceso = crear_proceso(buffer_2,prioridad,socket_demorado);
 //					if ( buffer_2 != NULL ){
 //						free(buffer_2);
 //					}

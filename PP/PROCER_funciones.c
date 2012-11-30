@@ -39,9 +39,6 @@ int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned i
 	pthread_mutex_lock(&mutexVarLPL);
 	if( strcmp(lpl,"RR") == 0){
 		if( cont_quantum >= quantum_max ){
-			pthread_mutex_lock(&mutexVarFinQuantum);
-			proceso.prioridad = finQ;
-			pthread_mutex_unlock(&mutexVarFinQuantum);
 
 			pthread_mutex_lock(&mutexListaFinQuantum);
 			agregar_proceso(listaFinQuantum,proceso);

@@ -29,7 +29,6 @@ void mostrar_funciones(stack *pila);
 
 //Prototipos de funcion
 int server_socket(char *port);
-proceso crear_proceso(char *buffer,int socket);
 void error(const char *msg);
 int administrar_conexion(int cliente_sock,fd_set *master);
 int validar_mps_mmp(int cliente_sock);
@@ -164,47 +163,53 @@ int server_socket(char *port)
 int administrar_conexion(int cliente_sock,fd_set *master){
 	int retorno;
 	char *buffer=(char *)malloc(1);
+	char *prioridad=(char *)malloc(1);
 	proceso proceso;
 	pthread_t id_hilo=pthread_self();
 
 	// if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 	if(recibir_mensaje(&buffer,cliente_sock) == 0){
-		if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
+		if( recibir_mensaje(&prioridad,cliente_sock) == 0){
+			if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 
-			//Creamos el proceso
-			proceso = crear_proceso(buffer,cliente_sock);
-			logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","El proceso ha sido creado.");
-			char *log_text=(char *)malloc(127);
-			sprintf(log_text,"La prioridad del proceso es %d.",proceso.prioridad);
-			logx(proceso.pcb.pid,"LTS",id_hilo,"DEBUG",log_text);
-			//if( log_text != NULL ){ free(log_text);}
-//			if ( buffer != NULL ){
-//				free(buffer);
-//			}
+				//Creamos el proceso
+				proceso = crear_proceso(buffer,prioridad,cliente_sock);
+				logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","El proceso ha sido creado.");
+				char *log_text=(char *)malloc(127);
+				sprintf(log_text,"La prioridad del proceso es %d.",proceso.prioridad);
+				logx(proceso.pcb.pid,"LTS",id_hilo,"DEBUG",log_text);
+				//if( log_text != NULL ){ free(log_text);}
+	//			if ( buffer != NULL ){
+	//				free(buffer);
+	//			}
+	//			if ( prioridad != NULL ){
+	//				free(prioridad);
+	//			}
 
-			pthread_mutex_lock(&mutexListaNuevos);
-			agregar_proceso(listaProcesosNuevos,proceso);
-			pthread_mutex_unlock(&mutexListaNuevos);
-			logx(proceso.pcb.pid,"LTS",id_hilo,"LSCH","Agregue el proceso a la lista de Nuevos.");
+				pthread_mutex_lock(&mutexListaNuevos);
+				agregar_proceso(listaProcesosNuevos,proceso);
+				pthread_mutex_unlock(&mutexListaNuevos);
+				logx(proceso.pcb.pid,"LTS",id_hilo,"LSCH","Agregue el proceso a la lista de Nuevos.");
 
-			pthread_mutex_lock(&mutexVarMPS);
-			mps++;
-			pthread_mutex_unlock(&mutexVarMPS);
-			logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de procesos en el sistema.");
+				pthread_mutex_lock(&mutexVarMPS);
+				mps++;
+				pthread_mutex_unlock(&mutexVarMPS);
+				logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de procesos en el sistema.");
 
-			pthread_mutex_lock(&mutexVarMMP);
-			mmp++;
-			pthread_mutex_unlock(&mutexVarMMP);
-			logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de multiprogramacion.");
+				pthread_mutex_lock(&mutexVarMMP);
+				mmp++;
+				pthread_mutex_unlock(&mutexVarMMP);
+				logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de multiprogramacion.");
 
-		 }else{
-			 if( retorno == -1){
-				 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo de proceso en el sistema.");
-			}
-			 if( retorno == -2){
-				 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo grado de multiprogramacion.");
-			}
-		 }
+			 }else{
+				 if( retorno == -1){
+					 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo de proceso en el sistema.");
+				}
+				 if( retorno == -2){
+					 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo grado de multiprogramacion.");
+				}
+			 }
+		}
 	 }
 	 FD_CLR(cliente_sock,&(*master));
 	 return 0;

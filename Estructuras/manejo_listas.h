@@ -16,8 +16,8 @@ void liberar_lista_de_procesos(nodo_proceso **proceso);
 void agregar_entrada_salida(nodo_entrada_salida **lista_bloqueados,instruccion_io instruccion_io);
 void agregar_primero_entrada_salida(nodo_entrada_salida **lista_bloqueados,instruccion_io instruccion_io);
 instruccion_io sacar_entrada_salida(nodo_entrada_salida **lista_bloqueados);
-void agregar_lista_de_procesos(nodo_proceso **listaProcesosListos, nodo_proceso **listaAAgregar,int prioridad);
+void agregar_lista_de_procesos(nodo_proceso **listaProcesosListos, nodo_proceso **listaAAgregar);
 void mostrar_lista(nodo_proceso **lista);
-void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino,int prioridad);
+void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino);
 
 #endif /* MANEJO_LISTAS_H_ */

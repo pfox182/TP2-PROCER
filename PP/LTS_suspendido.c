@@ -159,9 +159,6 @@ void *LTS_suspendido(){
 					pthread_mutex_unlock(&mutexVarMaxMMP);
 					pthread_mutex_unlock(&mutexVarMMP);
 
-					proceso.prioridad = lpr;
-					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"DEBUG","Se cambio la prioridad del proceso para agregarlo en ListaProcesosReanudados.");
-
 					pthread_mutex_lock(&mutexListaReanudados);
 					agregar_proceso(listaProcesosReanudados,proceso);
 					pthread_mutex_unlock(&mutexListaReanudados);
