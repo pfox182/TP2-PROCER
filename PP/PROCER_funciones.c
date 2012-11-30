@@ -11,6 +11,7 @@
 #include <pthread.h>
 
 //Variables globales
+extern int cant_instrucciones_ejecutadas;
 extern char *lpl;
 extern int finQ;
 extern unsigned int quantum_max;
@@ -22,6 +23,7 @@ extern pthread_mutex_t mutexVarFinQuantum;
 extern pthread_mutex_t mutexListaBloqueados;
 extern pthread_mutex_t mutexVarEsperaEstandar;
 extern pthread_mutex_t mutexVarCantIOTDisponibles;
+extern pthread_mutex_t mutexVarCantInstruccionesEjecutadas;
 
 //Listas globales
 extern nodo_entrada_salida **listaBloqueados;
@@ -124,6 +126,7 @@ int ejecutar_instruccion(char * instruccion,proceso *proceso,seccion *seccion_ej
 		}
 
 		if(es_un_io(palabra) == 0){
+			printf("Entre en es_un_io\n");
 			if( ejecutar_io(palabra,*proceso) != -1 ){//-1 => NO hay hilos de i/o disponibles
 				return 1;//1 => Me fui a E/S
 			}
@@ -240,6 +243,10 @@ unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
 	return posicion;
 }
 int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
+	pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
+	cant_instrucciones_ejecutadas++;
+	pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
+
 	int i,anterior;
 	char variable=palabra[0];
 	printf("El nombre de la variable es '%c', sacada de '%s'\n",variable,palabra);
@@ -314,7 +321,7 @@ int ejecutar_asignacion(char *palabra,pcb pcb){//ej: a+c;3
 }
 int asignar_valor(char variable,int valor,data *datos){
 	int i;
-	for(i=0;i<26;i++){
+	for(i=0;datos[i].variable;i++){
 		if(datos[i].variable == variable){
 			datos[i].valor=valor;
 			printf("Se asigno el valor %d a la variable '%c'\n",valor,datos[i].variable);
@@ -327,7 +334,7 @@ int asignar_valor(char variable,int valor,data *datos){
 
 int buscar_valor_de_variable(char letra,data *datos){
 	int i;
-	for(i=0;i<26;i++){
+	for(i=0;datos[i].variable;i++){
 		if(datos[i].variable == letra){
 			printf("El valor corrspondiente a la variable %c es %d\n",letra,datos[i].valor);
 			return datos[i].valor;
@@ -404,6 +411,10 @@ int es_un_delimitador(char caracter){
 }
 
 int ejecutar_salto(char *tipo_de_salto,char *resto,pcb pcb,seccion *seccion_ejecutandose){
+	pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
+	cant_instrucciones_ejecutadas++;
+    pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
+
 	char variable,*etiqueta;
 	int valor_de_variable,posicion_etiqueta;
 
@@ -475,6 +486,9 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	int valor=buscar_valor_de_variable(resto[0],proceso.pcb.datos);
 	char *numero=(char *)malloc(strlen("00000"));
 	char *msj=(char *)malloc(strlen("IMPRIMIENDO VARIABLE a: 00000"));
+	bzero(numero,strlen("00000"));
+	bzero(msj,strlen("IMPRIMIENDO VARIABLE a: 00000"));
+
 	strcpy(msj,"IMPRIMIENDO VARIABLE ");
 	strcat(msj,resto);
 	strcat(msj,": ");
@@ -510,6 +524,8 @@ int ejecutar_io(char *palabra,proceso proceso){
 	instruccion.instruccion="io";
 	instruccion.mensaje=numero;//El mensaje tiene el tiempo de espera
 
+	printf("Entre en ejecutar_io\n");
+
 	if( atoi(tipo) == BLOQUEANTE){
 		proceso.pcb.pc++;
 
@@ -519,18 +535,23 @@ int ejecutar_io(char *palabra,proceso proceso){
 
 		printf("Agregue a E/S\n");
 	}else{
-
+		printf("Entre en NO BLOQUEANTE\n");
+		printf("El semaforo esta con lock=%d\n",mutexVarCantIOTDisponibles.__data.__lock);
 		pthread_mutex_lock(&mutexVarCantIOTDisponibles);
+		printf("pASE EL SEMAFORO DE IOT DISPONIBLES\n");
 		if( cant_iot_disponibles > 0){
+			pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
 			proceso.pcb.pc++;
 			pthread_mutex_lock(&mutexListaBloqueados);
+			printf("Lo agregue a bloquados\n");
 			agregar_primero_entrada_salida(listaBloqueados,instruccion);
 			pthread_mutex_unlock(&mutexListaBloqueados);
 		}else{
+			pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
 			printf("Error iot ocupados\n");
 			return -1;
 		}
-		pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
+
 
 	}
 

@@ -16,7 +16,10 @@
 #include "../Estructuras/manejo_listas.h"
 
 //Variables globales
+double prioridad_anterior = 0;
 extern char *lpl;
+extern int cant_instrucciones_ejecutadas;
+extern double alfa;
 
 //Listas de procesos.
 extern nodo_proceso **listaProcesosNuevos;
@@ -37,13 +40,20 @@ extern pthread_mutex_t mutexListaListos;
 extern pthread_mutex_t mutexListaReanudados;
 extern pthread_mutex_t mutexListaFinQuantum;
 extern pthread_mutex_t mutexListaFinIO;
+extern pthread_mutex_t mutexVarAlfa;
+extern pthread_mutex_t mutexVarCantInstruccionesEjecutadas;
+extern pthread_mutex_t mutexVarLPN;
+
 //Prototipos
 void planificar(nodo_proceso**);
 nodo_proceso** planificarPorFIFO(nodo_proceso**);
-nodo_proceso* planificarPorPRI(nodo_proceso **listaAPlanificar);
-nodo_proceso *ordenaPorPrioridad(nodo_proceso *listaAPlanificar, int n);
-int cantidad_nodos(nodo_proceso **listaAPlanificar);
 nodo_proceso** planificarPorRR(nodo_proceso **listaAPlanificar);
+nodo_proceso* planificarPorPRI(nodo_proceso **listaAPlanificar);
+nodo_proceso *planificarPorSPN(nodo_proceso **listaAPlanificar);
+double calcular_prioridad_spn();
+nodo_proceso *ordenaPorPrioridad(nodo_proceso *listaAPlanificar, int n);
+nodo_proceso *ordenaPorPrioridadSPN(nodo_proceso *listaAPlanificar, int n);
+int cantidad_nodos(nodo_proceso **listaAPlanificar);
 int las_listas_estan_vacias_sts();
 //AUX
 
@@ -56,6 +66,7 @@ void * STS_funcion (){
 			//TODO:implementar los semaforos de las listas restantes
 			//TODO: la prioridad maxima debe ser variable.
 			for (prioridad = 1; prioridad < 5; ++prioridad) {
+				pthread_mutex_lock(&mutexVarLPN);
 				if(prioridad == lpn){
 					if (listaProcesosNuevos != NULL){
 						//TODO:Implementar semaforos
@@ -69,6 +80,7 @@ void * STS_funcion (){
 						printf("Agregue los procesos de NUEVOS STS\n");
 					}
 				}
+				pthread_mutex_unlock(&mutexVarLPN);
 				if (prioridad == lpr ){
 					if (listaProcesosReanudados != NULL){
 						pthread_mutex_lock(&mutexListaListos);
@@ -132,7 +144,7 @@ void planificar(nodo_proceso **listaAPlanificar){
 		planificarPorPRI(listaAPlanificar);
 	}
 	if ( strcmp(lpl,"SPN") == 0) {
-		// TODO: Llamar a la funcion correspondiente a este algoritmo
+		planificarPorSPN(listaAPlanificar);
 	}
 }
 
@@ -148,8 +160,31 @@ nodo_proceso *planificarPorPRI(nodo_proceso **listaAPlanificar){
 	return ordenaPorPrioridad(*listaAPlanificar,cantidad_nodos(listaAPlanificar));
 }
 
+nodo_proceso *planificarPorSPN(nodo_proceso **listaAPlanificar){
+	nodo_proceso *listaAux = *listaAPlanificar;
+
+	while( listaAux != NULL ){
+		listaAux->proceso.prioridad_spn = calcular_prioridad_spn();
+		listaAux = listaAux->sig;
+	}
+
+	return ordenaPorPrioridadSPN(*listaAPlanificar,cantidad_nodos(listaAPlanificar));
+}
+double calcular_prioridad_spn(){
+	double prioridad;
+
+	pthread_mutex_lock(&mutexVarAlfa);
+	pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
+	prioridad = prioridad_anterior * alfa + cant_instrucciones_ejecutadas * ( 1 - alfa);
+	pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
+	pthread_mutex_unlock(&mutexVarAlfa);
+
+	prioridad_anterior = prioridad;
+	printf("La prioridad spn es:%f y el alfa es:%f\n",prioridad,alfa);
+	return prioridad;
+}
+
 nodo_proceso *ordenaPorPrioridad(nodo_proceso *listaAPlanificar, int n) {
-	printf("Entre a ordenar por prioridad, LPL=%s\n",lpl);
 	nodo_proceso *aux;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
 	nodo_proceso *siguiente;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
 	nodo_proceso *anterior;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
@@ -163,6 +198,43 @@ nodo_proceso *ordenaPorPrioridad(nodo_proceso *listaAPlanificar, int n) {
 		while(j<=(n-i)){
 			siguiente=aux->sig;
 			if (aux->proceso.prioridad > siguiente->proceso.prioridad){
+				aux->sig = siguiente->sig;
+				siguiente->sig =aux;
+				if (anterior !=NULL){
+					anterior->sig=siguiente;
+					anterior=siguiente;
+				} else {
+					listaAPlanificar=siguiente;
+					anterior = listaAPlanificar;
+				}
+				aux=anterior->sig;
+			} else {
+				anterior=aux;
+				aux=siguiente;
+			}
+			j++;
+		}
+	}
+	//free(aux);
+	//free(siguiente);
+	//->free(anterior);
+	return listaAPlanificar;
+}
+
+nodo_proceso *ordenaPorPrioridadSPN(nodo_proceso *listaAPlanificar, int n) {
+	nodo_proceso *aux;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *siguiente;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *anterior;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	int j=1;
+	int i;
+
+	for(i=1;i<n;i++){
+		aux = listaAPlanificar;
+		anterior=NULL;
+		j=1;
+		while(j<=(n-i)){
+			siguiente=aux->sig;
+			if (aux->proceso.prioridad_spn > siguiente->proceso.prioridad_spn){
 				aux->sig = siguiente->sig;
 				siguiente->sig =aux;
 				if (anterior !=NULL){

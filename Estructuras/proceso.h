@@ -42,6 +42,7 @@ struct pila_ejecucion{
 struct proceso{
 	pcb pcb;
 	int prioridad;
+	double prioridad_spn;
 	int cliente_sock;
 	pila_ejecucion **pila_ejecucion;
 }typedef proceso;
@@ -62,6 +63,12 @@ struct nodo_entrada_salida{
 	struct nodo_entrada_salida *sig;
 } typedef nodo_entrada_salida;
 
+
+//PROTOTIPOS
+proceso crear_proceso(char *buffer,int socket);
+data* cargar_datos(char *buffer);
+void error(const char *msg);
+stack* sacar_funciones(char *buffer);
 
 #endif /* PROCESO_H_ */
 

@@ -30,6 +30,8 @@ extern unsigned int max_mmp;
 extern int lpr;
 extern pthread_mutex_t mutexListaSuspendidos;
 extern pthread_mutex_t mutexListaReanudados;
+extern pthread_mutex_t mutexVarMaxMMP;
+extern pthread_mutex_t mutexVarMMP;
 
 //Prototipos
 int las_listas_estan_vacias_lts();
@@ -41,15 +43,16 @@ void *LTS_suspendido(){
 	proceso proceso;
 	stack *aux;
 	int i;
+	int h;
 
 	char template[]="------------------------------------------\n\n";
 	char template1[]="ID=";
-	char template2[]="PD=";
+	char template2[]="PC=";
 	char template3[]="\n- Estructura de codigo ----\n";
 	char template4[]="-------------------------\n\n- Estructura de Datos ----\n";
 	char template5[]="-------------------------\n\n- Estructura de Stack ----\n";
 	char msjReanudo[]="Desea reanudar el proceso.(si/no):";
-	char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(MMP)";
+	char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(mmp)";
 
 	while(1){
 		if ( las_listas_estan_vacias_lts() != 0 ){
@@ -96,7 +99,7 @@ void *LTS_suspendido(){
 
 			//VARIABLES
 			strcat(msjVariables,template4);
-			for( i=0;i<26;i++){
+			for( i=0;proceso.pcb.datos[i].variable;i++){
 
 				//filtrar variables que no estan en el proceso
 				var[0]=proceso.pcb.datos[i].variable;
@@ -110,17 +113,21 @@ void *LTS_suspendido(){
 			}
 
 			//FUNCIONES
-			strcat(msjVariables,template5);
+			h = 1;
 			aux=proceso.pcb.pila;
 
 			while ( aux != NULL ){
 				if ( aux->linea <= proceso.pcb.pc ){
+					if ( h == 1){
+					strcat(msjVariables,template5);
+					}
 					sprintf(funcion,"%d",aux->linea);
 					strcat(funcion,",");
 					strcat(funcion,aux->funcion);
 					strcat(msjVariables,funcion);
 					strcat(msjVariables,"\n");
 				}
+				h = 0;
 				aux = aux->siguiente;
 			}
 
@@ -128,7 +135,7 @@ void *LTS_suspendido(){
 			//Mensaje reanudacion
 			strcat(msjVariables,msjReanudo);
 
-			//realloc(*msjVariables,strlen(msjVariables));
+			msjVariables=realloc(msjVariables,strlen(msjVariables));
 
 			//Envio mensaje con el estado proceso suspendido y pregunto si se reanuda.
 			enviar_mensaje(msjVariables,proceso.cliente_sock);
@@ -139,12 +146,20 @@ void *LTS_suspendido(){
 
 			//respuestaReanudo="no";
 			if ( (strstr(respuestaReanudo,"si")) != NULL ){
+				pthread_mutex_lock(&mutexVarMaxMMP);
+				pthread_mutex_lock(&mutexVarMMP);
 				if ( mmp < max_mmp ){
+					pthread_mutex_unlock(&mutexVarMaxMMP);
+					pthread_mutex_unlock(&mutexVarMMP);
+
 					proceso.prioridad = lpr;
 					pthread_mutex_lock(&mutexListaReanudados);
 					agregar_proceso(listaProcesosReanudados,proceso);
 					pthread_mutex_unlock(&mutexListaReanudados);
 				}else{
+					pthread_mutex_unlock(&mutexVarMaxMMP);
+					pthread_mutex_unlock(&mutexVarMMP);
+
 					pthread_mutex_lock(&mutexListaSuspendidos);
 					agregar_proceso(listaProcesosSuspendidos,proceso);
 					pthread_mutex_unlock(&mutexListaSuspendidos);
@@ -179,7 +194,5 @@ int las_listas_estan_vacias_lts(){
 	if( *listaProcesosSuspendidos == NULL ){
 		return 0;
 	}
-	//TODO:Agregar las otras listas
 	return 1;
 }
-

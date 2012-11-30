@@ -10,6 +10,7 @@
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_pila_ejecucion.h"
 #include "../Estructuras/manejo_mensajes.h"
+#include "../Log/manejo_log.h"
 
 #include "PROCER_funciones.h"
 
@@ -19,6 +20,7 @@ int liberar_proceso(proceso *proceso);
 int las_listas_estan_vacias_procer();
 
 //Variables globales pp.c
+int cant_instrucciones_ejecutadas;
 extern unsigned int mmp;
 extern unsigned int mps;
 extern int suspendido;
@@ -28,6 +30,7 @@ extern pthread_mutex_t mutexListaSuspendidos;
 extern pthread_mutex_t mutexVarSuspendido;
 extern pthread_mutex_t mutexVarMMP;
 extern pthread_mutex_t mutexVarMPS;
+extern pthread_mutex_t mutexVarCantInstruccionesEjecutadas;
 
 //Listas globales
 extern nodo_proceso **listaProcesosListos;
@@ -39,16 +42,23 @@ void mostrar_datos(data *datos);
 
 void * PROCER_funcion(){
 
+	pthread_t id_hilo=pthread_self();
+
 	while(1){
 		if ( las_listas_estan_vacias_procer() != 0 ){
-
+			printf("La cantidad de instrucciones ejecutadas era: %d\n",cant_instrucciones_ejecutadas);
+			pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
+			cant_instrucciones_ejecutadas=0;
+			pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
 
 			pthread_mutex_lock(&mutexListaListos);
 			proceso proceso=sacar_proceso(listaProcesosListos);
 			pthread_mutex_unlock(&mutexListaListos);
 
-			printf("Se saco el proceso PID:%d de listos\n",proceso.pcb.pid);
-			printf("El codigo es:\n%s\n",proceso.pcb.codigo);
+
+			printf("Se saco el proceso PID:%d de listos\n",proceso.pcb.pid);//TODO:BORRAR
+
+			logx(proceso.pcb.pid,"PROCER",id_hilo,"LSCH","Se saco el proceso de la lista de Listos.");
 
 			unsigned int cant_instrucciones = cant_lineas(proceso.pcb.codigo);
 			printf("La cantidad de instrucciones son %d\n",cant_instrucciones);
@@ -62,18 +72,22 @@ void * PROCER_funcion(){
 
 			   if( proceso.pcb.pc == 0 ){//Es la 1° vez que ejecuta
 				   agregar_a_pila_ejecucion(crear_seccion("fin_programa",&proceso.pcb.pc ),proceso.pila_ejecucion);
-				   printf("Se agrego por 1° vez la seccion PROGRAMA\n");
 			   }
 			   if( suspendido == 1){
 				   pthread_mutex_lock(&mutexVarSuspendido);
 
 				   suspendido = 0;
+				   pthread_mutex_lock(&mutexVarMMP);
+				   printf("Antes de que Decremente mmp=%d\n",mmp);
+				   mmp--;
+				   printf("Decremente mmp=%d\n",mmp);
+				   pthread_mutex_unlock(&mutexVarMMP);
+
+				   logx(proceso.pcb.pid,"PROCER",id_hilo,"INFO","Se suspendio el proceso.");
 				   pthread_mutex_lock(&mutexListaSuspendidos);
 				   agregar_proceso(listaProcesosSuspendidos,proceso);
 				   pthread_mutex_unlock(&mutexListaSuspendidos);
-				   printf("Agregue el proceso %d a Suspendidos\n",proceso.pcb.pid);
-				   printf("Se suspendio un proceso, suspendido=%d\n",suspendido);
-				   printf("suspendido=%d despues de meterle 0\n",suspendido);
+				   logx(proceso.pcb.pid,"PROCER",id_hilo,"LSCH","Se agrego el proceso a la lista de Suspendidos.");
 
 				   pthread_mutex_unlock(&mutexVarSuspendido);
 				   break;
@@ -81,7 +95,8 @@ void * PROCER_funcion(){
 
 				   seccion_a_ejecutar=sacar_primera_seccion(proceso.pila_ejecucion);
 				   if( strcmp(seccion_a_ejecutar.nombre_seccion,"") == 0){
-					   printf("Error al sacar la seccion a ejecutar, es igual a NULL\n");
+					   logx(proceso.pcb.pid,"PROCER",id_hilo,"ERROR","Error al sacar la seccion a ejecutar, es nula.");
+					   printf("Error al sacar la seccion a ejecutar, es igual a NULL\n");//TODO:borrar
 					   break;
 				   }
 				   printf("Se extrajo { la seccion %s con contador=%d }\n",seccion_a_ejecutar.nombre_seccion,*seccion_a_ejecutar.contador_instruccion);
@@ -113,10 +128,14 @@ void * PROCER_funcion(){
 							printf("Finalizo la ejecucion\n");
 
 							pthread_mutex_lock(&mutexVarMMP);
+							printf("Antes de que Decremente mmp=%d\n",mmp);
 							--mmp;
+							printf("Decremente mmp=%d\n",mmp);
 							pthread_mutex_unlock(&mutexVarMMP);
 							pthread_mutex_lock(&mutexVarMPS);
+							printf("Antes de que Decremente mps=%d\n",mps);
 							--mps;
+							printf("Decremente mps=%d\n",mps);
 							pthread_mutex_unlock(&mutexVarMPS);
 
 							mostrar_datos(proceso.pcb.datos);
@@ -144,7 +163,7 @@ int enviar_proceso_terminado(proceso proceso){
 
 	strcpy(msjVariables,"El proceso a finalizado:\n");
 
-	for( i=0;i<26;i++){
+	for( i=0;proceso.pcb.datos[i].variable;i++){
 
 		//filtrar variables que no estan en el proceso
 		var[0]=proceso.pcb.datos[i].variable;
@@ -167,7 +186,7 @@ int enviar_proceso_terminado(proceso proceso){
 
 int liberar_proceso(proceso *proceso){
 	printf("Free - liberar_proceso\n");
-	free(proceso->pcb.codigo);
+	//free(proceso->pcb.codigo);
 	printf("Libere el codigo\n");
 	free(proceso->pcb.datos);
 	printf("Libere los datos\n");
@@ -192,7 +211,7 @@ int las_listas_estan_vacias_procer(){
 void mostrar_datos(data *datos){
 	//Muestro vector
 	int i;
-	for (i = 0; i < 26 ; i++)
+	for (i = 0; datos[i].variable  ; i++)
 	{
 		printf("El valor de datos[%d] es var:%c valor:%d,\n",i,datos[i].variable,datos[i].valor);
 	}

@@ -21,6 +21,7 @@
 #include "../Estructuras/manejo_listas_funciones.h"
 #include "../Estructuras/manejo_mensajes.h"
 #include "LTS_suspendido.h"
+#include "LTS_demorado.h"
 
 //aux
 void mostrar_funciones(stack *pila);
@@ -28,25 +29,20 @@ void mostrar_funciones(stack *pila);
 //Prototipos de funcion
 int server_socket(char *port);
 proceso crear_proceso(char *buffer,int socket);
-data* cargar_datos(char *buffer);
 void error(const char *msg);
-stack* sacar_funciones(char *buffer);
 int administrar_conexion(int cliente_sock,fd_set *master);
 int validar_mps_mmp(int cliente_sock);
 
 
 //Variables globales
 extern unsigned int mps,mmp,max_mps,max_mmp; //Se usa extern para indicar que son variables globales de otro archivo
-extern unsigned int pid;
 extern char* puerto;
-extern int lpn;
 	//Semaforos
 extern pthread_mutex_t mutexListaNuevos;
 extern pthread_mutex_t mutexVarMaxMMP;
 extern pthread_mutex_t mutexVarMaxMPS;
 extern pthread_mutex_t mutexVarMMP;
 extern pthread_mutex_t mutexVarMPS;
-extern pthread_mutex_t mutexVarLPN;
 
 //Listas
 extern nodo_proceso **listaProcesosNuevos;
@@ -54,11 +50,15 @@ extern coneccionesDemoradas **listaConeccionesDemoradas;
 
 void * LTS_funcion(void * var){
 	pthread_t LTS_suspendido_hilo;
+	pthread_t LTS_demorado_hilo;
 
-	printf("Creando hilo de LTS\n");
+	pthread_t id_hilo=pthread_self();
+
+	printf("Creando hilo de LTS con id=%lu\n",id_hilo);
 
 
 	pthread_create(&(LTS_suspendido_hilo), NULL, LTS_suspendido, NULL); // Creamos el thread LTS suspendido
+	pthread_create(&(LTS_demorado_hilo), NULL, LTS_demorado, NULL); // Creamos el thread LTS demorado
 	printf("Soy el hilo de LTS_suspendido.\n");
 
 	server_socket(puerto);
@@ -171,32 +171,8 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 	char *buffer=(char *)malloc(1);
 	proceso proceso;
 
-	printf("Entre a administrar conexion\n");
-	int socket_demorado;
-	if((socket_demorado=sacar_conexion_demorada(listaConeccionesDemoradas))>0){
-		printf("Pase la obtencio de socker demorado, que es %d\n",socket_demorado);
-		if( (retorno = validar_mps_mmp(socket_demorado)) == 0){
-			printf("El sokcet demorado es %d\n",socket_demorado);
-			recibir_mensaje(&buffer,socket_demorado);
-			printf("Recibi el codigo del socket demorado\n");
-			proceso = crear_proceso(buffer,socket_demorado);
+	printf("Entre a administrar conexion con mps=%d y mmp=%d\n",mps,mmp);
 
-			pthread_mutex_lock(&mutexListaNuevos);
-			agregar_proceso(listaProcesosNuevos,proceso);
-			pthread_mutex_unlock(&mutexListaNuevos);
-
-
-
-		}else{
-			if( retorno == 1){
-				printf("Volvi a encolar el socket demorado\n");
-				encolar_primero(listaConeccionesDemoradas,socket_demorado);
-			}else{
-				printf("Se produjo un error al validar el mmp y mps.\n");
-			}
-		}
-		FD_CLR(socket_demorado,&(*master));
-	}
 
 	// if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 	if(recibir_mensaje(&buffer,cliente_sock) == 0){
@@ -204,6 +180,10 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 		 printf("El socket del cliente es %d\n",cliente_sock);
 		 //Creamos el proceso
 		proceso = crear_proceso(buffer,cliente_sock);
+
+		if ( buffer != NULL ){
+			free(buffer);
+		}
 		printf("Sali de crear proceso, pid= %d\n",proceso.pcb.pid);
 		if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 
@@ -215,20 +195,25 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 			pthread_mutex_unlock(&mutexListaNuevos);
 
 			pthread_mutex_lock(&mutexVarMPS);
+			printf("Antes de que Incremente mps=%d\n",mps);
 			mps++;
+			printf("Incremente mps=%d\n",mps);
 			pthread_mutex_unlock(&mutexVarMPS);
 
 			pthread_mutex_lock(&mutexVarMMP);
+			printf("Antes de que Incremente mmp=%d\n",mmp);
 			mmp++;
+			printf("Incremente mmp=%d\n",mmp);
 			pthread_mutex_unlock(&mutexVarMMP);
 
 			 printf("El proceso creado fue:\n");
 				printf("\tPID:%d\n",proceso.pcb.pid);
 				printf("\tPC:%d\n",proceso.pcb.pc);
 				printf("\tDatos:\n");
-				int i;
-				for( i=0;i<26;i++){
+				int i=0;
+				while(proceso.pcb.datos[i].variable){
 					printf("\t variable: %c valor:%d\n",proceso.pcb.datos[i].variable,proceso.pcb.datos[i].valor);
+					i++;
 				}
 				mostrar_funciones(proceso.pcb.pila);
 			 printf("\tPrioridad:%d\n",proceso.prioridad);
@@ -245,173 +230,41 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 }
 int validar_mps_mmp(int cliente_sock){
 
-	//TODO: nose si hay que poner un semaforo tambien para MMP y MPS
 	pthread_mutex_lock(&mutexVarMaxMPS);
 	pthread_mutex_lock(&mutexVarMaxMMP);
+	pthread_mutex_lock(&mutexVarMPS);
+	pthread_mutex_lock(&mutexVarMMP);
 	if( mps >= max_mps || mmp >= max_mmp){//Si no entra al if => todo. ok
+		pthread_mutex_unlock(&mutexVarMMP);
+		pthread_mutex_unlock(&mutexVarMaxMMP);
+
 		if( mps >= max_mps){
+			pthread_mutex_unlock(&mutexVarMPS);
+			pthread_mutex_unlock(&mutexVarMaxMPS);
+
 			enviar_mensaje("Se sobrepaso el maximo de prosesos en el sistema(mps).\n",cliente_sock);
 			printf("Sobrepaso de mps\n");
 			close(cliente_sock);
 			return 1;
 		}else{
+			pthread_mutex_unlock(&mutexVarMPS);
+			pthread_mutex_unlock(&mutexVarMaxMPS);
 			enviar_mensaje("Se sobrepaso el maximo de multiprogramacion(mmp), se encolara su solicitud.\n",cliente_sock);
-			printf("Sobrepaso de mmp\n");
 			encolar_solicitud(listaConeccionesDemoradas,cliente_sock);
 			return 1;
 		}
+
+	}else{
+		pthread_mutex_unlock(&mutexVarMPS);
+		pthread_mutex_unlock(&mutexVarMMP);
+		pthread_mutex_unlock(&mutexVarMaxMMP);
+		pthread_mutex_unlock(&mutexVarMaxMPS);
 	}
-	pthread_mutex_unlock(&mutexVarMaxMMP);
-	pthread_mutex_unlock(&mutexVarMaxMPS);
+
+
+
 
 	printf("mps y mmp ok\n");
 	return 0;
 }
 
-proceso crear_proceso(char *buffer,int socket){
-	proceso proceso;
-	pcb pcb;
-
-	pcb.pid = ++pid;
-	pcb.pc = 0;
-
-	if( strlen(buffer) == 0){
-		printf("El buffer en crear_proceso esta vacio\n");
-	}
-
-	printf("Pase la primera parte de crear proceso\n");
-	pcb.codigo = (char *)malloc(strlen(buffer));
-	bzero(pcb.codigo,strlen(buffer));
-	memcpy(pcb.codigo,buffer,strlen(buffer));
-
-	printf("Estoy por sacar funciones\n");
-	pcb.pila= sacar_funciones(buffer);
-	printf("Estoy por sacar datos\n");
-	pcb.datos = cargar_datos(buffer);
-
-	printf("Estoy por hacer bzero\n");
-	bzero(buffer,strlen(buffer));
-
-	proceso.pcb = pcb;
-
-	pthread_mutex_lock(&mutexVarLPN);
-	proceso.prioridad = lpn;
-	pthread_mutex_unlock(&mutexVarLPN);
-
-	proceso.pila_ejecucion = (pila_ejecucion **)malloc(sizeof(pila_ejecucion));
-	bzero(proceso.pila_ejecucion,sizeof(pila_ejecucion));
-	proceso.cliente_sock = socket;
-
-	free(buffer);
-	return proceso;
-}
-
-data* cargar_datos(char *buffer){
-	//Declaro variables
-
-	data *puntero;
-	data *datos=(data *)malloc(sizeof(data)*26);//Antes data datos[26];
-	bzero(datos,sizeof(data)*26);
-	int i;
-	char j;
-	char *separacion;
-	int flag;
-	char *resto=(char *)malloc(strlen(buffer));
-	memcpy(resto,buffer,strlen(buffer));
-	char *linea;
-
-	//Inicializo el vector de variables
-
-	for (i = 0,j='a'; i < 26; i++,j++)
-	{
-		datos[i].variable = j;
-		datos[i].valor = -1;
-	}
-
-	while( resto != NULL){
-		linea = strtok(resto,"\n");
-		resto = strtok(NULL,"\0");
-
-		if( strstr(linea,"variable") != NULL){
-			//Lee la cadena y cargo en vector las variables existentes.
-			separacion = strtok(linea," ");
-			separacion = strtok(NULL,",");
-			while( separacion != NULL )
-			{
-				//busco posicion de la variable en el vector
-				i=0;
-				flag=1;
-				while(flag != 0)
-				{
-					if ( datos[i].variable == *separacion ){
-						flag = 0;
-					}
-					else{
-						i++;
-					}
-				}
-				datos[i].valor = 0;
-				separacion = strtok(NULL,",");
-			}
-		}
-	}
-
-	puntero = &datos[0];
-
-	resto=NULL;
-	free(resto);
-
-	return puntero;
-}
-
-stack* sacar_funciones(char *buffer){
-	int numero_linea;
-	char *funcion;
-	char *resto=(char *)malloc(strlen(buffer));
-	memcpy(resto,buffer,strlen(buffer));
-	char *linea;
-	stack **lista_funciones=(stack **)malloc(sizeof(stack));
-	//stack *lista_aux=(stack *)malloc(sizeof(stack));
-	//bzero(lista_aux,sizeof(stack));
-	//memcpy(lista_funciones,lista_aux,sizeof(stack));
-	*lista_funciones=NULL;
-
-	numero_linea = 0;
-
-	printf("Estoy por entrar al while\n");
-	while( resto != NULL){
-		printf("Estoy en el while =(\n");
-		linea = strtok(resto,"\n");
-		resto = strtok(NULL,"\0");
-		numero_linea++;
-		if( strstr(linea,"()") != NULL){
-			funcion = strtok(linea,"()");
-			agregar_funcion(lista_funciones,funcion,numero_linea);
-		}
-
-	}
-	printf("Sali del while\n");
-
-	resto=NULL;
-	free(resto);
-
-	return *lista_funciones;
-}
-
-/******* error() *********************
-Imprime el stacktrace ante un error
- ****************************************/
-void error(const char *msg)
-{
-    perror(msg);
-    exit(1);
-}
-
-void mostrar_funciones(stack *pila){
-	stack *aux=pila;
-	//Muestro vector
-	while( aux != NULL && aux->linea < 30 ){
-		printf("Funcion %s , en la linea %d\n",aux->funcion,aux->linea);
-		aux=aux->siguiente;
-	}
-}

@@ -11,7 +11,7 @@
 #define SIZE_FECHA 11
 #define SIZE_HORA 9
 
-int logx(char *proceso,char *hilo, char *tipo, char *log);
+int logx(int proceso,char *hilo,unsigned long id_hilo, char *tipo, char *log);
 char *cGetDate();
 char *cGetTime();
 

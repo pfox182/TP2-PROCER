@@ -6,6 +6,8 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 #include "colaConeccionesDemoradas.h"
 
 void encolar_solicitud(coneccionesDemoradas **listaConexionesDemoradas,int socket_client){
@@ -25,7 +27,7 @@ void encolar_solicitud(coneccionesDemoradas **listaConexionesDemoradas,int socke
 		while( aux->siguiente != NULL){//Recorro hasta el ultimo
 			aux = aux->siguiente;
 		}
-		aux->siguiente =nuevo_proceso;
+		aux->siguiente = nuevo_proceso;
 	}
 }
 
@@ -62,4 +64,15 @@ int sacar_conexion_demorada(coneccionesDemoradas **listaConexionesDemoradas){
 	}
 
 	return socket_client;
+}
+void mostrar_lista_conecciones(coneccionesDemoradas **listaProcesos){
+	coneccionesDemoradas **lista=(coneccionesDemoradas **)malloc(sizeof(listaProcesos));
+	memcpy(lista,listaProcesos,sizeof(listaProcesos));
+
+	while( *lista != NULL){
+		printf("El socket demorado es: %d\n",(*lista)->socket_cliente);
+		(*lista)=(*lista)->siguiente;
+	}
+	free(lista);
+
 }

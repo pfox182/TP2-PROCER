@@ -13,11 +13,19 @@
 #include "manejo_log.h"
 
 
-int logx(char *proceso,char *hilo, char *tipo, char *log){
+int logx(int proceso,char *hilo,unsigned long id_hilo, char *tipo, char *log){
 	char *nombre_archivo="/home/utnso/pp.log";
 	char *logeo=(char *)malloc(1024);
 	char *fecha = cGetDate();
 	char *hora=cGetTime();
+
+	char *proceso_pid=(char *)malloc(strlen("PID=000000"));
+	bzero(proceso_pid,strlen("PID=000000"));
+	char *id=(char *)malloc(strlen("/0000000000000000000000"));
+	bzero(id,strlen("/0000000000000000000000"));
+
+	sprintf(proceso_pid,"PID=%d",proceso);
+	sprintf(id," / %lu",id_hilo);
 
 	FILE * archivo;
 	if ( (archivo=fopen (nombre_archivo, "a+")) == NULL){
@@ -30,9 +38,10 @@ int logx(char *proceso,char *hilo, char *tipo, char *log){
 	strcat(logeo," ");
 	strcat(logeo,hora);
 	strcat(logeo," ] - [ ");
-	strcat(logeo,proceso);
+	strcat(logeo,proceso_pid);
 	strcat(logeo," ] [ ");
 	strcat(logeo,hilo);
+	strcat(logeo,id);
 	strcat(logeo," ] [ ");
 	strcat(logeo,tipo);
 	strcat(logeo," ]: [ ");
@@ -42,6 +51,7 @@ int logx(char *proceso,char *hilo, char *tipo, char *log){
 	fwrite(logeo,sizeof(char),strlen(logeo),archivo);
 
 	fclose(archivo);
+	free(proceso_pid);
 
 	return 0;
 }

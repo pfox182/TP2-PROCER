@@ -97,11 +97,3 @@ int las_listas_estan_vacias_iot(){
 	}
 	return 1;
 }
-
-
-
-
-
-
-
-

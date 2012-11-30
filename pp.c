@@ -30,12 +30,7 @@
 int comprobar_archivo_configuracion();
 int cargar_archivo_configuracion();
 void  SIGhandler(int sig);
-//aux
-int global_sts=0;
-int global_procer=0;
-int global_iot=0;
 //SEMAFOROS *************************************
-int semaforos;
 pthread_mutex_t mutexListaNuevos = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexListaReanudados = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexListaSuspendidos = PTHREAD_MUTEX_INITIALIZER;
@@ -57,6 +52,8 @@ pthread_mutex_t mutexVarFinIO = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexVarSuspendido = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexVarEsperaEstandar = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexVarCantIOTDisponibles = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarAlfa = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexVarCantInstruccionesEjecutadas = PTHREAD_MUTEX_INITIALIZER;
 
 //***************************
 
@@ -74,6 +71,7 @@ unsigned int finIO;
 char *espera_estandar;
 char *espera_estandar_io;
 unsigned int cantidad_hilos_iot; //Valor de hilos IOT
+double alfa;
 
 //Variables globales propias
 int suspendido=0;
@@ -124,8 +122,10 @@ int main(int argc, char *argv[])
    pthread_mutex_init(&mutexVarSuspendido,NULL);
    pthread_mutex_init(&mutexVarEsperaEstandar,NULL);
    pthread_mutex_init(&mutexVarCantIOTDisponibles,NULL);
+   pthread_mutex_init(&mutexVarAlfa,NULL);
+   pthread_mutex_init(&mutexVarCantInstruccionesEjecutadas,NULL);
 
-   logx("PID=1","2","3","4");
+   logx(1,"HILO",1244,"tipo","log");
 
    cargar_archivo_configuracion();
    printf("Cargue el archivo de configuracion\n");
@@ -198,6 +198,7 @@ int comprobar_archivo_configuracion(){
 			if( valor != NULL && strcmp(lpl,valor)){
 				pthread_mutex_lock(&mutexVarLPL);
 				lpl=valor;
+				printf("Cambie el lpl %s\n",lpl);
 				pthread_mutex_unlock(&mutexVarLPL);
 			}
 		}
@@ -248,6 +249,16 @@ int comprobar_archivo_configuracion(){
 				pthread_mutex_unlock(&mutexVarEsperaEstandar);
 			}
 		}
+		if( strstr(linea,"alfa") ){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL && alfa!=atof(valor)){
+				pthread_mutex_lock(&mutexVarAlfa);
+				alfa=atof(valor);
+				printf("Cambie el alfa %f\n",alfa);
+				pthread_mutex_unlock(&mutexVarAlfa);
+			}
+		}
 	}
 
 	return 0;
@@ -260,7 +271,7 @@ int cargar_archivo_configuracion(){
 	char *valor;
 
 	listaConeccionesDemoradas=(coneccionesDemoradas **)malloc(sizeof(coneccionesDemoradas));
-		bzero(listaConeccionesDemoradas,sizeof(coneccionesDemoradas));
+	bzero(listaConeccionesDemoradas,sizeof(coneccionesDemoradas));
 
 	listaFinIO=(nodo_proceso **)malloc(sizeof(nodo_proceso));
 	bzero(listaFinIO,sizeof(nodo_proceso));
@@ -376,6 +387,13 @@ int cargar_archivo_configuracion(){
 			if( valor != NULL ){
 				cantidad_hilos_iot=atoi(valor);
 				cant_iot_disponibles=atoi(valor);
+			}
+		}
+		if( strstr(linea,"alfa")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				alfa=atof(valor);
 			}
 		}
 

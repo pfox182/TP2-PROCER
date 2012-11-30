@@ -16,5 +16,6 @@ struct coneccionesDemoradas {
 void encolar_solicitud(coneccionesDemoradas **listaConexionesDemoradas,int socket_client);
 void encolar_primero(coneccionesDemoradas **listaConexionesDemoradas,int socket_client);
 int sacar_conexion_demorada(coneccionesDemoradas **listaConnecionesDemoradas);
+void mostrar_lista_conecciones(coneccionesDemoradas **listaProcesos);
 
 #endif /* COLACONECCIONESDEMORADAS_H_ */
