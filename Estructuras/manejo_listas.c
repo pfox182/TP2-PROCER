@@ -152,7 +152,9 @@ void mostrar_lista(nodo_proceso **listaProcesos){
 void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino,int prioridad){
 	proceso proceso;
 	nodo_proceso **listaAux = listaAgregar;
-	char *mensaje = (char*)malloc(256);
+	char *mensaje = (char*)malloc(1024);
+	char *pidProceso = (char*)malloc(1024);
+	bzero(mensaje,1024);
 
 	while( *listaAux != NULL){
 		proceso = sacar_proceso(listaAux);
@@ -160,9 +162,12 @@ void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **
 		agregar_proceso(listaProcesos,proceso);
 
 		//Armo el mensaje a loguear.
-		strcat(mensaje,"Se paso el proceso de ");
+		strcat(mensaje,"Se paso el proceso ");
+		sprintf(pidProceso,"%d",proceso.pcb.pid);
+		strcat(mensaje,pidProceso);
+		strcat(mensaje," de ");
 		strcat(mensaje,listaOrigen);
-		strcat(mensaje,"a ");
+		strcat(mensaje," a ");
 		strcat(mensaje,listaDestino);
 		strcat(mensaje,".\n");
 
