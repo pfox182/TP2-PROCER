@@ -43,6 +43,10 @@ extern pthread_mutex_t mutexListaFinIO;
 extern pthread_mutex_t mutexVarAlfa;
 extern pthread_mutex_t mutexVarCantInstruccionesEjecutadas;
 extern pthread_mutex_t mutexVarLPN;
+extern pthread_mutex_t mutexVarLPR;
+extern pthread_mutex_t mutexVarFinQuantum;
+extern pthread_mutex_t mutexVarFinIO;
+extern pthread_mutex_t mutexVarLPL;
 
 //Prototipos
 void planificar(nodo_proceso**);
@@ -81,6 +85,7 @@ void * STS_funcion (){
 					}
 				}
 				pthread_mutex_unlock(&mutexVarLPN);
+				pthread_mutex_lock(&mutexVarLPR);
 				if (prioridad == lpr ){
 					if (listaProcesosReanudados != NULL){
 						pthread_mutex_lock(&mutexListaListos);
@@ -91,7 +96,8 @@ void * STS_funcion (){
 						printf("Agregue los procesos de REANUDADOS STS\n");
 					}
 				}
-
+				pthread_mutex_unlock(&mutexVarLPR);
+				pthread_mutex_lock(&mutexVarFinQuantum);
 				if (prioridad == finQ ){
 					if (listaFinQuantum != NULL){
 						pthread_mutex_lock(&mutexListaListos);
@@ -102,7 +108,8 @@ void * STS_funcion (){
 						printf("Agregue los procesos de FIN DE QUANTUM STS\n");
 					}
 				}
-
+				pthread_mutex_unlock(&mutexVarFinQuantum);
+				pthread_mutex_lock(&mutexVarFinIO);
 				if (prioridad == finIO){
 					if (listaFinIO != NULL){
 						pthread_mutex_lock(&mutexListaListos);
@@ -112,6 +119,7 @@ void * STS_funcion (){
 						pthread_mutex_unlock(&mutexListaListos);
 					}
 				}
+				pthread_mutex_unlock(&mutexVarFinIO);
 
 			}
 
@@ -133,7 +141,7 @@ void * STS_funcion (){
 
 
 void planificar(nodo_proceso **listaAPlanificar){
-
+	pthread_mutex_lock(&mutexVarLPL);
 	if ( strcmp(lpl,"FIFO") == 0) {
 		planificarPorFIFO(listaAPlanificar);
 	}
@@ -146,6 +154,7 @@ void planificar(nodo_proceso **listaAPlanificar){
 	if ( strcmp(lpl,"SPN") == 0) {
 		planificarPorSPN(listaAPlanificar);
 	}
+	pthread_mutex_unlock(&mutexVarLPL);
 }
 
 nodo_proceso** planificarPorFIFO(nodo_proceso **listaAPlanificar){
