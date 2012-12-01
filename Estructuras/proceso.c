@@ -54,6 +54,7 @@ proceso crear_proceso(char *buffer,char *prioridad,int socket){
 	pthread_mutex_unlock(&mutexVarLPN);
 
 	proceso.prioridad_spn = 0;
+	proceso.prioridad_FIFO_RR = 0;
 
 	proceso.pila_ejecucion = (pila_ejecucion **)malloc(sizeof(pila_ejecucion));
 	bzero(proceso.pila_ejecucion,sizeof(pila_ejecucion));
