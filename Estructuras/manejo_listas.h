@@ -18,6 +18,6 @@ void agregar_primero_entrada_salida(nodo_entrada_salida **lista_bloqueados,instr
 instruccion_io sacar_entrada_salida(nodo_entrada_salida **lista_bloqueados);
 void agregar_lista_de_procesos(nodo_proceso **listaProcesosListos, nodo_proceso **listaAAgregar);
 void mostrar_lista(nodo_proceso **lista);
-void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino);
+void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino,int prioridad_FIFO_RR);
 
 #endif /* MANEJO_LISTAS_H_ */

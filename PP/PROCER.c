@@ -55,7 +55,7 @@ void * PROCER_funcion(){
 			pthread_mutex_unlock(&mutexListaListos);
 
 
-			printf("Se saco el proceso PID:%d de listos\n",proceso.pcb.pid);//TODO:BORRAR
+			//printf("Se saco el proceso PID:%d de listos\n",proceso.pcb.pid);//TODO:BORRAR
 
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se saco el proceso de la lista de Listos.");
 
@@ -90,6 +90,7 @@ void * PROCER_funcion(){
 			   }else{//No se suspendio la ejecucion
 
 				   seccion_a_ejecutar=sacar_primera_seccion(proceso.pila_ejecucion);
+				   //printf("La instruccion extraida de la pila es %s\n",seccion_a_ejecutar.nombre_seccion);
 				   if( strcmp(seccion_a_ejecutar.nombre_seccion,"") == 0){
 					   logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"ERROR","Error al sacar la seccion a ejecutar, es nula.");
 					   break;
@@ -137,7 +138,7 @@ void * PROCER_funcion(){
 							break;
 						}
 					}
-					bzero(instruccion,strlen(instruccion)+1);
+					bzero(instruccion,strlen(instruccion));
 				}
 			}
 			cont_quantum=0;
@@ -149,55 +150,113 @@ void * PROCER_funcion(){
 }
 
 int enviar_proceso_terminado(proceso proceso){
-	int i;
-	char *numero=(char *)malloc(strlen("00000")+1);
+	int h,i;
+	stack *aux;
+	char template[]="------------------------------------------\n\n";
+	char template1[]="ID=";
+	char template2[]="PC=";
+	char template3[]="\n- Estructura de codigo ----\n";
+	char template4[]="-------------------------\n\n- Estructura de Datos ----\n";
+	char template5[]="-------------------------\n\n- Estructura de Stack ----\n";
+
+	char *respuestaReanudo=(char *)malloc(strlen("si"));
+	bzero(respuestaReanudo,strlen("si"));
+	char *numero=(char *)malloc(strlen("00000"));
+	bzero(numero,strlen("00000"));
 	char *var=(char *)malloc(sizeof(char));
+	bzero(var,sizeof(char));
+	char *id=(char *)malloc(strlen("00000"));
+	bzero(id,strlen("00000"));
+	char *pc=(char *)malloc(strlen("00000"));
+	bzero(pc,strlen("00000"));
+	char *funcion=(char *)malloc(256);
+	bzero(funcion,256);
 	char *msjVariables=(char *)malloc(1024);//mirar tamaño
+	bzero(msjVariables,1024);
 
-	strcpy(msjVariables,"El proceso a finalizado:\n");
 
+	strcpy(msjVariables,"El proceso ha finalizado:\n");
+
+
+	strcat(msjVariables,template);
+
+	//ID
+	strcat(msjVariables,template1);
+	sprintf(id,"%d",proceso.pcb.pid);
+	strcat(msjVariables,id);
+	strcat(msjVariables,"\n");
+	//PC
+	strcat(msjVariables,template2);
+	sprintf(pc,"%d",proceso.pcb.pc);
+	strcat(msjVariables,pc);
+	strcat(msjVariables,"\n");
+	//CODIGO
+	strcat(msjVariables,template3);
+	strcat(msjVariables,proceso.pcb.codigo);
+
+	//VARIABLES
+	strcat(msjVariables,template4);
 	for( i=0;proceso.pcb.datos[i].variable;i++){
 
 		//filtrar variables que no estan en el proceso
 		var[0]=proceso.pcb.datos[i].variable;
 		var[1]='\0';
 		strcat(msjVariables,var);
-		strcat(msjVariables," = ");
+		strcat(msjVariables,"=");
 		sprintf(numero,"%d",proceso.pcb.datos[i].valor);
 		strcat(msjVariables,numero);
 		strcat(msjVariables,"\n");
 
 	}
 
+	//FUNCIONES
+	h = 1;
+	aux=proceso.pcb.pila;
+
+	while ( aux != NULL ){
+		if ( aux->linea <= proceso.pcb.pc ){
+			if ( h == 1){
+			strcat(msjVariables,template5);
+			}
+			sprintf(funcion,"%d",aux->linea);
+			strcat(funcion,",");
+			strcat(funcion,aux->funcion);
+			strcat(msjVariables,funcion);
+			strcat(msjVariables,"\n");
+		}
+		h = 0;
+		aux = aux->siguiente;
+	}
+
 	//Envio mensaje variables proceso suspendido.
 	if ( enviar_mensaje(msjVariables,proceso.cliente_sock) == -1 ){
 		return -1;
 	}
-	if( numero != NULL ){
-		free(numero);
-	}
-	if( var != NULL ){
-		free(var);
-	}
-	if( msjVariables != NULL ){
-		free(msjVariables);
-	}
+
+	//Libero Malloc
+	free(respuestaReanudo);
+	free(numero);
+	free(var);
+	free(id);
+	free(pc);
+	free(funcion);
+	free(msjVariables);
 
 	return 0;
 }
 
 int liberar_proceso(proceso *proceso){
-	printf("Free - liberar_proceso\n");
-	free(proceso->pcb.codigo);
-	printf("Libere el codigo\n");
+	//printf("Free - liberar_proceso\n");
+	//free(proceso->pcb.codigo);
+	//printf("Libere el codigo\n");
 	free(proceso->pcb.datos);
-	printf("Libere los datos\n");
+	//printf("Libere los datos\n");
 	free(proceso->pcb.pila);
-	printf("Libere la pila\n");
+	//printf("Libere la pila\n");
 	free(proceso->pila_ejecucion);
-	printf("Libere la pila de ejecucion\n");
+	//printf("Libere la pila de ejecucion\n");
 	close(proceso->cliente_sock);
-	printf("Cerre la conexion\n");
+	//printf("Cerre la conexion\n");
 
 	return 0;
 }

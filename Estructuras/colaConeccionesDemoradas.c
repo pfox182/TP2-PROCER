@@ -70,7 +70,7 @@ void mostrar_lista_conecciones(coneccionesDemoradas **listaProcesos){
 	memcpy(lista,listaProcesos,sizeof(listaProcesos));
 
 	while( *lista != NULL){
-		printf("El socket demorado es: %d\n",(*lista)->socket_cliente);
+		//printf("El socket demorado es: %d\n",(*lista)->socket_cliente);
 		(*lista)=(*lista)->siguiente;
 	}
 	free(lista);

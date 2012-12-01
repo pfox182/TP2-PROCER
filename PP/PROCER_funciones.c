@@ -58,8 +58,8 @@ int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned i
 }
 
 unsigned int cant_lineas(const char *codigo){
-	char *resto=(char *)malloc(strlen(codigo)+1);
-	memcpy(resto,codigo,strlen(codigo)+1);
+	char *resto=(char *)malloc(strlen(codigo));
+	memcpy(resto,codigo,strlen(codigo));
 	unsigned int cant_lineas=0;
 
 	while( resto != NULL){
@@ -76,8 +76,8 @@ unsigned int cant_lineas(const char *codigo){
 char * leer_instruccion(char *codigo,unsigned int pc){
 	char *instruccion=NULL;
 	char *linea;
-	char *resto=(char *)malloc(strlen(codigo)+1);
-	memcpy(resto,codigo,strlen(codigo)+1);
+	char *resto=(char *)malloc(strlen(codigo));
+	memcpy(resto,codigo,strlen(codigo));
 	unsigned int linea_actual=0;
 
 	while( resto != NULL){
@@ -133,6 +133,7 @@ int ejecutar_instruccion(char * instruccion,proceso *proceso,seccion *seccion_ej
 		if(es_un_io(palabra) == 0){
 			if( ejecutar_io(palabra,*proceso) != -1 ){//-1 => NO hay hilos de i/o disponibles
 				return 1;//1 => Me fui a E/S
+				break;
 			}
 		}
 
@@ -172,7 +173,7 @@ int es_una_variable(char* palabra){
 
 int es_una_funcion(char* palabra){
 
-	if( palabra[0] == 'f' && (es_un_numero(palabra[1]) == 0)){
+	if( strstr(palabra,"()") != NULL){
 		return 0;
 	}
 	return -1;
@@ -199,20 +200,23 @@ int es_un_io(char* palabra){
 
 
 int ejecutar_funcion(char *nombre_funcion,proceso *proceso){
+	//printf("Nombre de funcion es %s\n",nombre_funcion);
 	nombre_funcion=strtok(nombre_funcion,"()");
+	//printf("Nombre de funcion es %s\n",nombre_funcion);
 
 	unsigned int posicion = buscar_inicio_de_funcion(nombre_funcion,(*proceso).pcb.codigo);
+	//printf("Pase inicio funcion\n");
 	//char *instruccion;
-	char fin_funcion[30];
-	bzero(fin_funcion,strlen(fin_funcion)+1);
+	char fin_funcion[1024];
+	bzero(fin_funcion,1024);
 	strcpy(fin_funcion,"fin_funcion ");
 	strcat(fin_funcion,nombre_funcion);
 	unsigned int *cont_funcion=(unsigned int *)malloc(sizeof(unsigned int));
 	*cont_funcion=posicion;
 	seccion aux;
-	aux.nombre_seccion=(char *)malloc(strlen(fin_funcion)+1);
-	bzero(aux.nombre_seccion,strlen(fin_funcion)+1);
-	strcpy(aux.nombre_seccion,fin_funcion);
+	aux.nombre_seccion=(char *)malloc(1024);
+	bzero(aux.nombre_seccion,1024);
+	memcpy(aux.nombre_seccion,fin_funcion,strlen(fin_funcion));
 	aux.contador_instruccion=cont_funcion;
 
 	agregar_a_pila_ejecucion(aux,(*proceso).pila_ejecucion);
@@ -221,10 +225,10 @@ int ejecutar_funcion(char *nombre_funcion,proceso *proceso){
 }
 unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
 	unsigned int posicion=0;
-	char *resto=(char *)malloc(strlen(codigo)+1);
-	memcpy(resto,codigo,strlen(codigo)+1);
+	char *resto=(char *)malloc(strlen(codigo));
+	memcpy(resto,codigo,strlen(codigo));
 	char *linea;
-	char comienzo_funcion[30];
+	char comienzo_funcion[1024];
 	strcpy(comienzo_funcion,"comienzo_funcion ");
 	strcat(comienzo_funcion,nombre_funcion);
 	while( resto != NULL ){
@@ -236,6 +240,7 @@ unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
 		}
 		posicion++;
 	}
+	//free(resto);
 
 	return posicion;
 }
@@ -272,25 +277,25 @@ int ejecutar_asignacion(char *palabra,proceso proceso){//ej: a+c;3
 
 	//i=2 para saltear a la variable y al '='
 	for(i=2;i<strlen(palabra);i++){//Compruebo que no se halla ejecutado antes una io()s
-		printf("Valor_total es %d\n",valor_total);
+		//printf("Valor_total es %d\n",valor_total);
 		//a=io(1,1)
 		if( palabra[i] == 'i' && palabra[++i] == 'o'){
-			printf("La palabra antes del ++ es %s\n",palabra);
+			//printf("La palabra antes del ++ es %s\n",palabra);
 			palabra++;
 			palabra++;
-			printf("La palabra despues del ++ es %s\n",palabra);
+			//printf("La palabra despues del ++ es %s\n",palabra);
 
 			if ( ejecutar_io(palabra,proceso) == 0 ){
 				valor_total=0;
+				hice_un_io=1;
 			}else{
 				valor_total=1;
 			}
-			hice_un_io=1;
 			break;
 		}
 
 		if(es_un_caracter(palabra[i]) == 0 ){
-			printf("Entre en es_un_caracter con %c\n",palabra[i]);
+			//printf("Entre en es_un_caracter con %c\n",palabra[i]);
 			valor_aux=buscar_valor_de_variable(palabra[i],pcb);
 			if( palabra[i-1] == '-' ){
 				valor_total-=valor_aux;
@@ -300,7 +305,7 @@ int ejecutar_asignacion(char *palabra,proceso proceso){//ej: a+c;3
 		}
 
 		if(es_un_numero(palabra[i]) == 0){
-			printf("Entre en es_un_numero\n");
+			//printf("Entre en es_un_numero\n");
 			numero=extraer_numero(palabra,i);
 			bzero(log_text,256);
 			sprintf(log_text,"El numero extraido es %s ,de la linea '%s'\n",numero,palabra);
@@ -334,10 +339,11 @@ int ejecutar_asignacion(char *palabra,proceso proceso){//ej: a+c;3
 
 			i+=(strlen(numero));//avanzo la cantidad de caracteres del numero
 			sleep(atoi(numero));
+			break;
 		}
 	}
 
-	printf("En ejecutar aignacion -> El valor a asignar a %c es %d\n",variable,valor_total);
+	//printf("En ejecutar aignacion -> El valor a asignar a %c es %d\n",variable,valor_total);
 	asignar_valor(variable,valor_total,pcb);
 	if( se_espero == 'n'){//Solo se espera si no se espero en ';'
 
@@ -348,16 +354,18 @@ int ejecutar_asignacion(char *palabra,proceso proceso){//ej: a+c;3
 
 	//if(log_text != NULL){free(log_text);}
 	if (hice_un_io == 0){
+		//printf("no Hice un IO\n");
 		return 0;
 	}else{
+		//printf("Hice un IO\n");
 		return 1;
 	}
 
 }
 int asignar_valor(char variable,int valor,pcb pcb){
-	char *log_text=(char *)malloc(256);
+	char log_text[256];
 
-	printf("En asignar_valor -> El valor a asignar a %c es %d\n",variable,valor);
+	//printf("En asignar_valor -> El valor a asignar a %c es %d\n",variable,valor);
 	data *datos=pcb.datos;
 	int i;
 	for(i=0;datos[i].variable;i++){
@@ -401,7 +409,7 @@ int buscar_valor_de_variable(char letra,pcb pcb){
 char * extraer_numero(char *palabra,int posicion){//12+b o 12;
 	int i=posicion;
 	int j=0;
-	char *numero=(char *)malloc(strlen(palabra)+1);
+	char *numero=(char *)malloc(strlen(palabra));
 	bzero(numero,sizeof(numero));
 
 	if( es_un_numero(palabra[posicion]) == 0){
@@ -525,8 +533,8 @@ int ejecutar_salto(char *tipo_de_salto,char *resto,pcb pcb,seccion *seccion_ejec
 int buscar_posicion_etiqueta(char *etiqueta,char *codigo){
 	int posicion=0;
 	char *linea;
-	char *resto=(char *)malloc(strlen(codigo)+1);
-	memcpy(resto,codigo,strlen(codigo)+1);
+	char *resto=(char *)malloc(strlen(codigo));
+	memcpy(resto,codigo,strlen(codigo));
 
 	while(resto!=NULL){
 		linea=strtok(resto,"\n");
@@ -549,10 +557,10 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	int espera=-1;
 	int i;
 	int valor=buscar_valor_de_variable(resto[0],proceso.pcb);
-	char *numero=(char *)malloc(strlen("00000")+1);
-	char *msj=(char *)malloc(strlen("IMPRIMIENDO VARIABLE a: 00000")+1);
-	bzero(numero,strlen("00000")+1);
-	bzero(msj,strlen("IMPRIMIENDO VARIABLE a: 00000")+1);
+	char *numero=(char *)malloc(strlen("00000"));
+	char *msj=(char *)malloc(strlen("IMPRIMIENDO VARIABLE a: 00000"));
+	bzero(numero,strlen("00000"));
+	bzero(msj,strlen("IMPRIMIENDO VARIABLE a: 00000"));
 
 	if( resto[1] == ';'){
 		variable=strtok(resto,";");
@@ -564,7 +572,7 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 		variable=resto;
 	}
 
-	printf("El tiempo ha esperar es %d\n",espera);
+	//printf("El tiempo ha esperar es %d\n",espera);
 	strcpy(msj,"IMPRIMIENDO VARIABLE ");
 	strcat(msj,variable);
 	strcat(msj,": ");
@@ -597,7 +605,7 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 
 int ejecutar_io(char *palabra,proceso proceso){
 
-	printf("La intruccion es io: %s.\n",palabra);
+	//printf("La intruccion es io: %s.\n",palabra);
 	char *log_text=(char *)malloc(256);
 
 	instruccion_io instruccion;
@@ -644,7 +652,7 @@ int ejecutar_io(char *palabra,proceso proceso){
 
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"DEBUG","La instruccion de io no bloqueante encontro un hilo de IOT disponible.");
 
-			printf("Lo agregue a bloquados\n");
+			//printf("Lo agregue a bloquados\n");
 			agregar_primero_entrada_salida(listaBloqueados,instruccion);
 			pthread_mutex_unlock(&mutexListaBloqueados);
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la lista de Bloqueados.");
@@ -654,7 +662,7 @@ int ejecutar_io(char *palabra,proceso proceso){
 			enviar_mensaje("Error todos los hilos de IOT estan ocupados.",proceso.cliente_sock);
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"ERROR","Error todos los hilos de IOT estan ocupados.");
 			//if( log_text != NULL){free(log_text);}
-			printf("Esta ocupado el hilo de IOT\n");
+			//printf("Esta ocupado el hilo de IOT\n");
 			return -1;
 		}
 

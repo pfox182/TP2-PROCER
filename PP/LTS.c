@@ -142,7 +142,7 @@ int server_socket(char *port)
 					  if( newfd > fdmax){//Actualizar el maximo
 						  fdmax = newfd;
 					  }
-					  printf("Nueva coneccion desde en socket %d\n",newfd);
+					  //printf("Nueva coneccion desde en socket %d\n",newfd);
 				  }
     	      }else{
     				 //Se establecio la coneccion con un proceso PI
@@ -162,6 +162,7 @@ int server_socket(char *port)
  ****************************************/
 int administrar_conexion(int cliente_sock,fd_set *master){
 	int retorno;
+	char *paso_mensaje=(char *)malloc(256);
 	char *buffer=(char *)malloc(1);
 	char *prioridad=(char *)malloc(1);
 	proceso proceso;
@@ -174,6 +175,11 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 
 				//Creamos el proceso
 				proceso = crear_proceso(buffer,prioridad,cliente_sock);
+				bzero(paso_mensaje,256);
+				sprintf(paso_mensaje,"Se creo el proceso con PID=%d\n",proceso.pcb.pid);
+				enviar_mensaje(paso_mensaje,cliente_sock);
+
+
 				logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","El proceso ha sido creado.");
 				char *log_text=(char *)malloc(127);
 				sprintf(log_text,"La prioridad del proceso es %d.",proceso.prioridad);

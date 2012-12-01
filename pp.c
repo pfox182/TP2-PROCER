@@ -62,6 +62,7 @@ unsigned int max_mps=10; //Maximo de procesos en el sistema
 unsigned int max_mmp=10; //Maximo valor de multiprogramacion
 char *lpl; //Algoritmo de ordenamiento para lista de procesos listos.
 unsigned int quantum_max=2;
+int prioridad_FIFO_RR;
 char *puerto;
 	//Prioridades de los algoritmos.
 unsigned int lpn;
@@ -128,7 +129,8 @@ int main(int argc, char *argv[])
    logx(1,"HILO",1244,"tipo","log");
 
    cargar_archivo_configuracion();
-   printf("Cargue el archivo de configuracion\n");
+   //printf("Cargue el archivo de configuracion\n");
+   //printf("Cree %d hilos de oit\n",cantidad_hilos_iot);
 
    //CREACION DE LOS HILOS DEL PP.
    //TODO agregar validaciones a los hilos.
@@ -178,7 +180,7 @@ int comprobar_archivo_configuracion(){
 			if( valor != NULL && max_mps!=atoi(valor)){
 				pthread_mutex_lock(&mutexVarMaxMPS);
 				max_mps=atoi(valor);
-				printf("Cambie el mps %d\n",max_mps);
+				//printf("Cambie el mps %d\n",max_mps);
 				pthread_mutex_unlock(&mutexVarMaxMPS);
 			}
 		}
@@ -198,7 +200,7 @@ int comprobar_archivo_configuracion(){
 			if( valor != NULL && strcmp(lpl,valor)){
 				pthread_mutex_lock(&mutexVarLPL);
 				lpl=valor;
-				printf("Cambie el lpl %s\n",lpl);
+				//printf("Cambie el lpl %s\n",lpl);
 				pthread_mutex_unlock(&mutexVarLPL);
 			}
 		}
@@ -255,7 +257,7 @@ int comprobar_archivo_configuracion(){
 			if( valor != NULL && alfa!=atof(valor)){
 				pthread_mutex_lock(&mutexVarAlfa);
 				alfa=atof(valor);
-				printf("Cambie el alfa %f\n",alfa);
+				//printf("Cambie el alfa %f\n",alfa);
 				pthread_mutex_unlock(&mutexVarAlfa);
 			}
 		}
@@ -266,8 +268,8 @@ int comprobar_archivo_configuracion(){
 }
 
 int cargar_archivo_configuracion(){
-	char *nombre_archivo=(char *)malloc(strlen("pp.conf")+1);
-	memcpy(nombre_archivo,"pp.conf",strlen("pp.conf")+1);
+	char *nombre_archivo=(char *)malloc(strlen("pp.conf"));
+	memcpy(nombre_archivo,"pp.conf",strlen("pp.conf"));
 	char *texto_del_archivo =leer_archivo(nombre_archivo);
 	char *linea;
 	char *valor;
@@ -373,7 +375,7 @@ int cargar_archivo_configuracion(){
 			valor = strtok(NULL,";");
 			if( valor != NULL ){
 				espera_estandar=valor;
-				printf("La espera estandar es %s\n",espera_estandar);
+				//printf("La espera estandar es %s\n",espera_estandar);
 			}
 		}
 		if( strstr(linea,"espera_estandar_io")){
@@ -410,6 +412,6 @@ void  SIGhandler(int sig)
 	pthread_mutex_lock(&mutexVarSuspendido);
 	suspendido = 1;
 	pthread_mutex_unlock(&mutexVarSuspendido);
-	printf("\nReceived a SIGUSR1.\n");
+	printf("\nRecibi la senial USR1.\n");
 }
 

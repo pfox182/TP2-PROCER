@@ -17,6 +17,7 @@
 #include "../Estructuras/colaConeccionesDemoradas.h"
 #include "../Estructuras/manejo_listas_funciones.h"
 #include "../Estructuras/manejo_mensajes.h"
+#include "../Log/manejo_log.h"
 
 //Prototipos de funcion
 int lista_esta_vacia_LTS_demorado();
@@ -43,6 +44,8 @@ void * LTS_demorado(void * var){
 	while(1){
 		if(  lista_esta_vacia_LTS_demorado() != 0 ){
 
+			pthread_t id_hilo=pthread_self();
+
 			int retorno;
 			int socket_demorado;
 			proceso proceso;
@@ -53,6 +56,10 @@ void * LTS_demorado(void * var){
 					recibir_mensaje(&buffer_2,socket_demorado);
 					recibir_mensaje(&prioridad,socket_demorado);
 					proceso = crear_proceso(buffer_2,prioridad,socket_demorado);
+					logx(proceso.pcb.pid,"LTS_demorado",id_hilo,"INFO","El proceso ha sido creado.");
+					char *log_text=(char *)malloc(127);
+					sprintf(log_text,"La prioridad del proceso es %d.",proceso.prioridad);
+					logx(proceso.pcb.pid,"LTS_demorado",id_hilo,"DEBUG",log_text);
 //					if ( buffer_2 != NULL ){
 //						free(buffer_2);
 //					}
@@ -60,25 +67,24 @@ void * LTS_demorado(void * var){
 					pthread_mutex_lock(&mutexListaNuevos);
 					agregar_proceso(listaProcesosNuevos,proceso);
 					pthread_mutex_unlock(&mutexListaNuevos);
+					logx(proceso.pcb.pid,"LTS_demorado",id_hilo,"LSCH","Agregue el proceso a la lista de Nuevos.");
 
 					pthread_mutex_lock(&mutexVarMPS);
-					printf("Antes de que Incremente mps=%d\n",mps);
 					mps++;
-					printf("Incremente mps=%d\n",mps);
 					pthread_mutex_unlock(&mutexVarMPS);
+					logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de procesos en el sistema.");
 
 					pthread_mutex_lock(&mutexVarMMP);
-					printf("Antes de que Incremente mmp=%d\n",mmp);
 					mmp++;
-					printf("Incremente mmp=%d\n",mmp);
 					pthread_mutex_unlock(&mutexVarMMP);
+					logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de multiprogramacion.");
 
 				}else{
-					if( retorno == 1){
-						//printf("Volvi a encolar el socket demorado\n");
-						encolar_primero(listaConeccionesDemoradas,socket_demorado);
-					}else{
-						printf("Se produjo un error al validar el mmp y mps.\n");
+					if( retorno == -1){
+						 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo de proceso en el sistema.");
+					}
+					 if( retorno == -2){
+						 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo grado de multiprogramacion.");
 					}
 				}
 
@@ -115,13 +121,12 @@ int validar_mps_mmp_demorado(int cliente_sock){
 			pthread_mutex_unlock(&mutexVarMaxMPS);
 
 			enviar_mensaje("Se sobrepaso el maximo de prosesos en el sistema(mps).\n",cliente_sock);
-			printf("Sobrepaso de mps\n");
 			close(cliente_sock);
-			return 1;
+			return -1;
 		}else{
 			pthread_mutex_unlock(&mutexVarMPS);
 			pthread_mutex_unlock(&mutexVarMaxMPS);
-			return 1;
+			return -2;
 		}
 
 	}else{
@@ -132,9 +137,6 @@ int validar_mps_mmp_demorado(int cliente_sock){
 	}
 
 
-
-
-	printf("mps y mmp ok\n");
 	return 0;
 }
 

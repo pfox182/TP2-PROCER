@@ -61,20 +61,20 @@ void *LTS_suspendido(){
 	while(1){
 		if ( las_listas_estan_vacias_lts() != 0 ){
 
-			char *respuestaReanudo=(char *)malloc(strlen("si")+1);
-			bzero(respuestaReanudo,strlen("si")+1);
-			char *numero=(char *)malloc(strlen("00000")+1);
-			bzero(numero,strlen("00000")+1);
+			char *respuestaReanudo=(char *)malloc(strlen("si"));
+			bzero(respuestaReanudo,strlen("si"));
+			char *numero=(char *)malloc(strlen("00000"));
+			bzero(numero,strlen("00000"));
 			char *var=(char *)malloc(sizeof(char));
 			bzero(var,sizeof(char));
-			char *id=(char *)malloc(strlen("00000")+1);
-			bzero(id,strlen("00000")+1);
-			char *pc=(char *)malloc(strlen("00000")+1);
-			bzero(pc,strlen("00000")+1);
-			char *funcion=(char *)malloc(strlen("0000000000")+1);
-			bzero(funcion,strlen("0000000000")+1);
+			char *id=(char *)malloc(strlen("00000"));
+			bzero(id,strlen("00000"));
+			char *pc=(char *)malloc(strlen("00000"));
+			bzero(pc,strlen("00000"));
+			char *funcion=(char *)malloc(256);
+			bzero(funcion,256);
 			char *msjVariables=(char *)malloc(1024);//mirar tamaño
-			bzero(msjVariables,sizeof(1024));
+			bzero(msjVariables,1024);
 
 
 			strcpy(msjVariables,"El estado del proceso suspendido es:\n");
@@ -140,7 +140,7 @@ void *LTS_suspendido(){
 			//Mensaje reanudacion
 			strcat(msjVariables,msjReanudo);
 
-			msjVariables=realloc(msjVariables,strlen(msjVariables)+1);
+			msjVariables=realloc(msjVariables,strlen(msjVariables));
 
 			//Envio mensaje con el estado proceso suspendido y pregunto si se reanuda.
 			enviar_mensaje(msjVariables,proceso.cliente_sock);

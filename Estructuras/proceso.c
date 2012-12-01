@@ -38,14 +38,14 @@ proceso crear_proceso(char *buffer,char *prioridad,int socket){
 		printf("El buffer en crear_proceso esta vacio\n");
 	}
 
-	pcb.codigo = (char *)malloc(strlen(buffer)+2);
-	bzero(pcb.codigo,strlen(buffer)+2);
-	memcpy(pcb.codigo,buffer,strlen(buffer)+2);
+	pcb.codigo = (char *)malloc(strlen(buffer));
+	bzero(pcb.codigo,strlen(buffer));
+	memcpy(pcb.codigo,buffer,strlen(buffer));
 
 	pcb.pila= sacar_funciones(buffer);
 	pcb.datos = cargar_datos(buffer);
 
-	bzero(buffer,strlen(buffer)+1);
+	bzero(buffer,strlen(buffer));
 
 	proceso.pcb = pcb;
 
@@ -72,11 +72,11 @@ data* cargar_datos(char *buffer){
 	//char j;
 	char *separacion;
 	//int flag;
-	printf("Estoy por hacer malloc en el cargar datos\n");
-	char *resto=(char *)malloc(strlen(buffer)+1);
-	printf("Hice malloc en el cargar datos\n");
-	memcpy(resto,buffer,strlen(buffer)+1);
-	printf("Estoy por hacer memcpy en el cargar datos\n");
+	//printf("Estoy por hacer malloc en el cargar datos\n");
+	char *resto=(char *)malloc(strlen(buffer));
+	//printf("Hice malloc en el cargar datos\n");
+	memcpy(resto,buffer,strlen(buffer));
+	//printf("Estoy por hacer memcpy en el cargar datos\n");
 	char *linea;
 
 	while( resto != NULL){
@@ -100,14 +100,14 @@ data* cargar_datos(char *buffer){
 	}
 
 	puntero = &datos[0];
-	printf("Estoy por hacer realloc en el cargar datos\n");
+	//printf("Estoy por hacer realloc en el cargar datos\n");
 	datos=realloc(datos,sizeof(data)*i);
-	printf("Hice el realloc en el cargar datos\n");
+	//printf("Hice el realloc en el cargar datos\n");
 
 	if( resto != NULL ){
 		free(resto);
 	}
-	printf("Hice el free en el cargar datos\n");
+	//printf("Hice el free en el cargar datos\n");
 
 	return puntero;
 }
@@ -115,8 +115,8 @@ data* cargar_datos(char *buffer){
 stack* sacar_funciones(char *buffer){
 	int numero_linea;
 	char *funcion;
-	char *resto=(char *)malloc(strlen(buffer)+1);
-	memcpy(resto,buffer,strlen(buffer)+1);
+	char *resto=(char *)malloc(strlen(buffer));
+	memcpy(resto,buffer,strlen(buffer));
 	char *linea;
 	stack **lista_funciones=(stack **)malloc(sizeof(stack));
 	//stack *lista_aux=(stack *)malloc(sizeof(stack));
@@ -126,9 +126,9 @@ stack* sacar_funciones(char *buffer){
 
 	numero_linea = 0;
 
-	printf("Estoy por entrar al while\n");
+	//printf("Estoy por entrar al while\n");
 	while( resto != NULL){
-		printf("Estoy en el while =(\n");
+		//printf("Estoy en el while =(\n");
 		linea = strtok(resto,"\n");
 		resto = strtok(NULL,"\0");
 		numero_linea++;
@@ -138,7 +138,7 @@ stack* sacar_funciones(char *buffer){
 		}
 
 	}
-	printf("Sali del while\n");
+	//printf("Sali del while\n");
 
 	if( resto != NULL ){
 		free(resto);
