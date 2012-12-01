@@ -148,7 +148,7 @@ void mostrar_lista(nodo_proceso **listaProcesos){
 
 }
 
-void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino){
+void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **listaAgregar,char *listaOrigen,char *listaDestino,int prioridad_FIFO_RR){
 	proceso proceso;
 	nodo_proceso **listaAux = listaAgregar;
 	char *mensaje = (char*)malloc(1024);
@@ -157,6 +157,8 @@ void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **
 
 	while( *listaAux != NULL){
 		proceso = sacar_proceso(listaAux);
+		prioridad_FIFO_RR++;
+		proceso.prioridad_FIFO_RR=prioridad_FIFO_RR;
 		agregar_proceso(listaProcesos,proceso);
 
 		//Armo el mensaje a loguear.

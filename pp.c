@@ -62,6 +62,7 @@ unsigned int max_mps=10; //Maximo de procesos en el sistema
 unsigned int max_mmp=10; //Maximo valor de multiprogramacion
 char *lpl; //Algoritmo de ordenamiento para lista de procesos listos.
 unsigned int quantum_max=2;
+int prioridad_FIFO_RR;
 char *puerto;
 	//Prioridades de los algoritmos.
 unsigned int lpn;
