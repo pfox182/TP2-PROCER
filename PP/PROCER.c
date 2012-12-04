@@ -15,6 +15,7 @@
 #include "PROCER_funciones.h"
 
 //Prototipos
+int es_un_token_nulo(char *palabra);
 int enviar_proceso_terminado(proceso proceso);
 int liberar_proceso(proceso *proceso);
 int las_listas_estan_vacias_procer();
@@ -103,6 +104,10 @@ void * PROCER_funcion(){
 				   }
 					//Leemos la siguiente instruccion a ejecutar
 					instruccion = leer_instruccion(proceso.pcb.codigo,*seccion_a_ejecutar.contador_instruccion);
+					while( es_un_token_nulo(instruccion)==0){
+						instruccion = leer_instruccion(proceso.pcb.codigo,*seccion_a_ejecutar.contador_instruccion);
+						++(*seccion_a_ejecutar.contador_instruccion);
+					}
 					if( instruccion != NULL){
 						//Calculo la proxima instruccion a leer
 						++(*seccion_a_ejecutar.contador_instruccion);
@@ -153,6 +158,20 @@ void * PROCER_funcion(){
 		}
 	}
 	return 0;
+}
+
+int  es_un_token_nulo(char *palabra){
+	if( strcmp("variables",palabra)==0 || strcmp("comienzo_programa",palabra)==0 || strcmp("",palabra)==0 ) {
+		return 0;
+	}
+
+	if( palabra[strlen(palabra)-1] == ':'){//Si es una etiqueta
+		return 0;
+	}
+	if( palabra[0] == '#'){
+		return 0;
+	}
+	return -1;
 }
 
 int enviar_proceso_terminado(proceso proceso){
