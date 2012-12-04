@@ -159,6 +159,10 @@ void *LTS_suspendido(){
 					pthread_mutex_unlock(&mutexVarMaxMMP);
 					pthread_mutex_unlock(&mutexVarMMP);
 
+					pthread_mutex_lock(&mutexVarMMP);
+					mmp++;
+					pthread_mutex_unlock(&mutexVarMMP);
+
 					pthread_mutex_lock(&mutexListaReanudados);
 					agregar_proceso(listaProcesosReanudados,proceso);
 					pthread_mutex_unlock(&mutexListaReanudados);
@@ -175,6 +179,7 @@ void *LTS_suspendido(){
 
 					enviar_mensaje(msjMMP,proceso.cliente_sock);
 					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","Se envio el mensaje que se supero MMP.");
+					sleep(2);
 				}
 
 			}else{

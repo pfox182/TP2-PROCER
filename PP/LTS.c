@@ -212,7 +212,11 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 					 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo de proceso en el sistema.");
 				}
 				 if( retorno == -2){
-					 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo grado de multiprogramacion.");
+					logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo grado de multiprogramacion.");
+					pthread_mutex_lock(&mutexVarMPS);
+					mps++;
+					pthread_mutex_unlock(&mutexVarMPS);
+					logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de procesos en el sistema.");
 				}
 			 }
 		}

@@ -50,9 +50,15 @@ void * PROCER_funcion(){
 			cant_instrucciones_ejecutadas=0;
 			pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
 
+			printf("Antes de sacar de listos\n");
+			mostrar_lista(listaProcesosListos);
+
 			pthread_mutex_lock(&mutexListaListos);
 			proceso proceso=sacar_proceso(listaProcesosListos);
 			pthread_mutex_unlock(&mutexListaListos);
+
+			printf("Saque el proceso %d de listos\n",proceso.pcb.pid);
+
 
 
 			//printf("Se saco el proceso PID:%d de listos\n",proceso.pcb.pid);//TODO:BORRAR

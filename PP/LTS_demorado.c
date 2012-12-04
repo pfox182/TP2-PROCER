@@ -21,7 +21,7 @@
 
 //Prototipos de funcion
 int lista_esta_vacia_LTS_demorado();
-int validar_mps_mmp_demorado(int cliente_sock);
+int validar_mmp_demorado(int cliente_sock);
 
 //Variables globales
 extern unsigned int mps,mmp,max_mps,max_mmp; //Se usa extern para indicar que son variables globales de otro archivo
@@ -40,6 +40,7 @@ void * LTS_demorado(void * var){
 	bzero(buffer_2,1);
 	char *prioridad=(char *)malloc(1);
 	bzero(prioridad,1);
+	char *paso_mensaje=(char *)malloc(256);
 
 	while(1){
 		if(  lista_esta_vacia_LTS_demorado() != 0 ){
@@ -51,12 +52,20 @@ void * LTS_demorado(void * var){
 			proceso proceso;
 
 			if((socket_demorado=sacar_conexion_demorada(listaConeccionesDemoradas))>0){
-				if( (retorno = validar_mps_mmp_demorado(socket_demorado)) == 0){
+				pthread_mutex_lock(&mutexVarMMP);
+				pthread_mutex_unlock(&mutexVarMMP);
+				if( (retorno = validar_mmp_demorado(socket_demorado)) == 0){
 					enviar_mensaje("Enviame el codigo\n",socket_demorado);
 					recibir_mensaje(&buffer_2,socket_demorado);
 					recibir_mensaje(&prioridad,socket_demorado);
 					proceso = crear_proceso(buffer_2,prioridad,socket_demorado);
+
+					bzero(paso_mensaje,256);
+					sprintf(paso_mensaje,"Se creo el proceso con PID=%d\n",proceso.pcb.pid);
+					enviar_mensaje(paso_mensaje,socket_demorado);
+
 					logx(proceso.pcb.pid,"LTS_demorado",id_hilo,"INFO","El proceso ha sido creado.");
+
 					char *log_text=(char *)malloc(127);
 					sprintf(log_text,"La prioridad del proceso es %d.",proceso.prioridad);
 					logx(proceso.pcb.pid,"LTS_demorado",id_hilo,"DEBUG",log_text);
@@ -69,23 +78,17 @@ void * LTS_demorado(void * var){
 					pthread_mutex_unlock(&mutexListaNuevos);
 					logx(proceso.pcb.pid,"LTS_demorado",id_hilo,"LSCH","Agregue el proceso a la lista de Nuevos.");
 
-					pthread_mutex_lock(&mutexVarMPS);
-					mps++;
-					pthread_mutex_unlock(&mutexVarMPS);
-					logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de procesos en el sistema.");
-
 					pthread_mutex_lock(&mutexVarMMP);
 					mmp++;
 					pthread_mutex_unlock(&mutexVarMMP);
 					logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de multiprogramacion.");
 
 				}else{
-					if( retorno == -1){
-						 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo de proceso en el sistema.");
-					}
+
 					 if( retorno == -2){
-						 logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo grado de multiprogramacion.");
-					}
+						logx(proceso.pcb.pid,"LTS",id_hilo,"ERROR","Se sobrepaso el maximo grado de multiprogramacion.");
+						logx(proceso.pcb.pid,"LTS",id_hilo,"INFO","Se aumento el grado de multiprogramacion.");
+					 }
 				}
 
 				//FD_CLR(socket_demorado,&(*master));
@@ -106,34 +109,20 @@ int lista_esta_vacia_LTS_demorado(){
 	return 1;
 }
 
-int validar_mps_mmp_demorado(int cliente_sock){
+int validar_mmp_demorado(int cliente_sock){
 
-	pthread_mutex_lock(&mutexVarMaxMPS);
 	pthread_mutex_lock(&mutexVarMaxMMP);
-	pthread_mutex_lock(&mutexVarMPS);
 	pthread_mutex_lock(&mutexVarMMP);
-	if( mps >= max_mps || mmp >= max_mmp){//Si no entra al if => todo. ok
+	if( mmp >= max_mmp){//Si no entra al if => todo. ok
 		pthread_mutex_unlock(&mutexVarMMP);
 		pthread_mutex_unlock(&mutexVarMaxMMP);
+		encolar_solicitud(listaConeccionesDemoradas,cliente_sock);
 
-		if( mps >= max_mps){
-			pthread_mutex_unlock(&mutexVarMPS);
-			pthread_mutex_unlock(&mutexVarMaxMPS);
-
-			enviar_mensaje("Se sobrepaso el maximo de prosesos en el sistema(mps).\n",cliente_sock);
-			close(cliente_sock);
-			return -1;
-		}else{
-			pthread_mutex_unlock(&mutexVarMPS);
-			pthread_mutex_unlock(&mutexVarMaxMPS);
-			return -2;
-		}
+		return -2;
 
 	}else{
-		pthread_mutex_unlock(&mutexVarMPS);
 		pthread_mutex_unlock(&mutexVarMMP);
 		pthread_mutex_unlock(&mutexVarMaxMMP);
-		pthread_mutex_unlock(&mutexVarMaxMPS);
 	}
 
 

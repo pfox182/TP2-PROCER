@@ -147,9 +147,9 @@ void planificar(nodo_proceso **listaAPlanificar){
 	if ( strcmp(lpl,"FIFO") == 0) {
 		planificarPorFIFO(listaAPlanificar);
 	}
-	if ( strcmp(lpl,"RR") == 0) {
-		planificarPorRR(listaAPlanificar);
-	}
+//	if ( strcmp(lpl,"RR") == 0) {
+//		planificarPorRR(listaAPlanificar);
+//	}//TODO:Arreglar RR
 	if ( strcmp(lpl,"PRI") == 0) {
 		planificarPorPRI(listaAPlanificar);
 	}

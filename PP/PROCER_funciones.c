@@ -42,9 +42,11 @@ int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned i
 
 			pthread_mutex_lock(&mutexListaFinQuantum);
 			agregar_proceso(listaFinQuantum,proceso);
+			printf("Agregue el proceso %d a fin de quantum\n",proceso.pcb.pid);
 			pthread_mutex_unlock(&mutexListaFinQuantum);
 
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"INFO","Se sobrepaso el quantum.");
+			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la Lista de fin de quantum.");
 			fin = -1;
 		}
 	}
@@ -279,7 +281,7 @@ int ejecutar_asignacion(char *palabra,proceso proceso){//ej: a+c;3
 	for(i=2;i<strlen(palabra);i++){//Compruebo que no se halla ejecutado antes una io()s
 		//printf("Valor_total es %d\n",valor_total);
 		//a=io(1,1)
-		if( palabra[i] == 'i' && palabra[++i] == 'o'){
+		if( palabra[i] == 'i' && palabra[i+1] == 'o'){
 			//printf("La palabra antes del ++ es %s\n",palabra);
 			palabra++;
 			palabra++;

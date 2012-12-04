@@ -141,7 +141,7 @@ void mostrar_lista(nodo_proceso **listaProcesos){
 	memcpy(lista,listaProcesos,sizeof(listaProcesos));
 
 	while( *lista != NULL){
-		//printf("El PID del proceso es: %d\n",(*lista)->proceso.pcb.pid);
+		printf("El PID del proceso es: %d\n",(*lista)->proceso.pcb.pid);
 		(*lista)=(*lista)->sig;
 	}
 	free(lista);
@@ -160,6 +160,9 @@ void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **
 		prioridad_FIFO_RR++;
 		proceso.prioridad_FIFO_RR=prioridad_FIFO_RR;
 		agregar_proceso(listaProcesos,proceso);
+		if( strcmp(listaOrigen,"FinQuantum")==0){
+			printf("Se agrego el proceso %d, de fin de quantum a listos\n",proceso.pcb.pid);
+		}
 
 		//Armo el mensaje a loguear.
 		strcat(mensaje,"Se paso el proceso ");
