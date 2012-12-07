@@ -12,6 +12,8 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+
+
 //Variables globales
 extern int cant_instrucciones_ejecutadas;
 extern char *lpl;
@@ -107,10 +109,10 @@ int ejecutar_instruccion(char * instruccion,proceso *proceso,seccion *seccion_ej
 		palabra = strtok(resto," ");
 		resto = strtok(NULL,"\0");
 
-//		if( es_un_token_nulo(palabra) == 0){
-//			//No hacer nada
-//			break;
-//		}
+		if( es_un_token_nulo(palabra) == 0){
+			//No hacer nada
+			break;
+		}
 
 		if( es_una_variable(palabra) == 0){//De la forma a=1 o a=b+c
 			if ( ejecutar_asignacion(palabra,(*proceso)) == 1){
@@ -143,7 +145,7 @@ int ejecutar_instruccion(char * instruccion,proceso *proceso,seccion *seccion_ej
 
 	return 0;
 }
-/*
+
 int  es_un_token_nulo(char *palabra){
 	if( strcmp("variables",palabra)==0 || strcmp("comienzo_programa",palabra)==0 || strcmp("",palabra)==0 ) {
 		return 0;
@@ -157,7 +159,7 @@ int  es_un_token_nulo(char *palabra){
 	}
 	return -1;
 }
-*/
+
 int es_una_variable(char* palabra){
 	int i,j;
 	char letras[26];

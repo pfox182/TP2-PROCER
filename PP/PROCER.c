@@ -20,6 +20,7 @@ int es_un_token_nulo(char *palabra);
 int enviar_proceso_terminado(proceso proceso);
 int liberar_proceso(proceso *proceso);
 int las_listas_estan_vacias_procer();
+int cantidad_nodos(nodo_proceso **listaAPlanificar);
 
 //Variables globales pp.c
 int cant_instrucciones_ejecutadas;
@@ -52,7 +53,7 @@ void * PROCER_funcion(){
 			cant_instrucciones_ejecutadas=0;
 			pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
 
-			printf("Antes de sacar de listos\n");
+			printf("PROCER - Antes de sacar de listos hay %d procesos\n",cantidad_nodos(listaProcesosListos));
 			mostrar_lista(listaProcesosListos);
 
 			pthread_mutex_lock(&mutexListaListos);
@@ -162,7 +163,8 @@ void * PROCER_funcion(){
 int tengo_que_contar_quantum(char* instruccion){
 	char *palabra;
 	char *resto=(char *)malloc(strlen(instruccion));
-	strcpy(resto,instruccion);
+	bzero(resto,strlen(instruccion));
+	memcpy(resto,instruccion,strlen(instruccion));
 
 	while( resto != NULL){
 		palabra = strtok(resto," ");
@@ -174,19 +176,6 @@ int tengo_que_contar_quantum(char* instruccion){
 	}
 
 	return 0;
-}
-int  es_un_token_nulo(char *palabra){
-	if( strcmp("variables",palabra)==0 || strcmp("comienzo_programa",palabra)==0 || strcmp("",palabra)==0 ) {
-		return 0;
-	}
-
-	if( palabra[strlen(palabra)-1] == ':'){//Si es una etiqueta
-		return 0;
-	}
-	if( palabra[0] == '#'){
-		return 0;
-	}
-	return -1;
 }
 
 int enviar_proceso_terminado(proceso proceso){

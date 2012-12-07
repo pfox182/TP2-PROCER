@@ -157,12 +157,12 @@ void agregar_lista_de_procesos_log(nodo_proceso **listaProcesos, nodo_proceso **
 
 	while( *listaAux != NULL){
 		proceso = sacar_proceso(listaAux);
+		printf("STS - Se saco el proceso PID=%d, de %s\n",proceso.pcb.pid,listaOrigen);
+
 		prioridad_FIFO_RR++;
 		proceso.prioridad_FIFO_RR=prioridad_FIFO_RR;
 		agregar_proceso(listaProcesos,proceso);
-		if( strcmp(listaOrigen,"FinQuantum")==0){
-			printf("Se agrego el proceso %d, de fin de quantum a listos\n",proceso.pcb.pid);
-		}
+		printf("STS - Se agego el proceso PID=%d, de %s a %s\n",proceso.pcb.pid,listaOrigen,listaDestino);
 
 		//Armo el mensaje a loguear.
 		strcat(mensaje,"Se paso el proceso ");
