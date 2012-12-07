@@ -54,10 +54,10 @@ void planificar(nodo_proceso**);
 nodo_proceso** planificarPorFIFO(nodo_proceso**);
 nodo_proceso** planificarPorRR(nodo_proceso **listaAPlanificar);
 nodo_proceso** planificarPorPRI(nodo_proceso **listaAPlanificar);
-nodo_proceso *planificarPorSPN(nodo_proceso **listaAPlanificar);
+nodo_proceso **planificarPorSPN(nodo_proceso **listaAPlanificar);
 double calcular_prioridad_spn();
 nodo_proceso **ordenaPorPrioridad(nodo_proceso **listaAPlanificar, int n);
-nodo_proceso *ordenaPorPrioridadSPN(nodo_proceso *listaAPlanificar, int n);
+nodo_proceso **ordenaPorPrioridadSPN(nodo_proceso **listaAPlanificar, int n);
 nodo_proceso **ordenaPorPrioridadFIFORR(nodo_proceso **listaAPlanificar, int n);
 int cantidad_nodos(nodo_proceso **listaAPlanificar);
 int las_listas_estan_vacias_sts();
@@ -145,7 +145,7 @@ void * STS_funcion (){
 void planificar(nodo_proceso **listaAPlanificar){
 	pthread_mutex_lock(&mutexVarLPL);
 	if ( strcmp(lpl,"FIFO") == 0) {
-		planificarPorFIFO(listaAPlanificar);
+		//planificarPorFIFO(listaAPlanificar);
 	}
 	if ( strcmp(lpl,"RR") == 0) {
 		planificarPorRR(listaAPlanificar);
@@ -171,7 +171,7 @@ nodo_proceso **planificarPorPRI(nodo_proceso **listaAPlanificar){
 	return ordenaPorPrioridad(listaAPlanificar,cantidad_nodos(listaAPlanificar));
 }
 
-nodo_proceso *planificarPorSPN(nodo_proceso **listaAPlanificar){
+nodo_proceso **planificarPorSPN(nodo_proceso **listaAPlanificar){
 	nodo_proceso *listaAux = *listaAPlanificar;
 
 	while( listaAux != NULL ){
@@ -179,7 +179,7 @@ nodo_proceso *planificarPorSPN(nodo_proceso **listaAPlanificar){
 		listaAux = listaAux->sig;
 	}
 
-	return ordenaPorPrioridadSPN(*listaAPlanificar,cantidad_nodos(listaAPlanificar));
+	return ordenaPorPrioridadSPN(listaAPlanificar,cantidad_nodos(listaAPlanificar));
 }
 double calcular_prioridad_spn(){
 	double prioridad;
@@ -233,15 +233,15 @@ nodo_proceso **ordenaPorPrioridad(nodo_proceso **listaAPlanificar, int n) {
 	return listaAPlanificar;
 }
 
-nodo_proceso *ordenaPorPrioridadSPN(nodo_proceso *listaAPlanificar, int n) {
-	nodo_proceso *aux;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
-	nodo_proceso *siguiente;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
-	nodo_proceso *anterior;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+nodo_proceso **ordenaPorPrioridadSPN(nodo_proceso **listaAPlanificar, int n) {
+	nodo_proceso *aux=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *siguiente=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *anterior=(nodo_proceso *)malloc(sizeof(nodo_proceso));
 	int j=1;
 	int i;
 
 	for(i=1;i<n;i++){
-		aux = listaAPlanificar;
+		aux = (*listaAPlanificar);
 		anterior=NULL;
 		j=1;
 		while(j<=(n-i)){
@@ -253,8 +253,8 @@ nodo_proceso *ordenaPorPrioridadSPN(nodo_proceso *listaAPlanificar, int n) {
 					anterior->sig=siguiente;
 					anterior=siguiente;
 				} else {
-					listaAPlanificar=siguiente;
-					anterior = listaAPlanificar;
+					(*listaAPlanificar)=siguiente;
+					anterior = (*listaAPlanificar);
 				}
 				aux=anterior->sig;
 			} else {
@@ -271,9 +271,9 @@ nodo_proceso *ordenaPorPrioridadSPN(nodo_proceso *listaAPlanificar, int n) {
 }
 
 nodo_proceso **ordenaPorPrioridadFIFORR(nodo_proceso **listaAPlanificar, int n) {
-	nodo_proceso *aux;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
-	nodo_proceso *siguiente;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
-	nodo_proceso *anterior;//=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *aux=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *siguiente=(nodo_proceso *)malloc(sizeof(nodo_proceso));
+	nodo_proceso *anterior=(nodo_proceso *)malloc(sizeof(nodo_proceso));
 	int j=1;
 	int i;
 

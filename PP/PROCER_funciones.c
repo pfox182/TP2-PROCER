@@ -657,7 +657,8 @@ int ejecutar_io(char *palabra,proceso proceso){
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"DEBUG","La instruccion de io no bloqueante encontro un hilo de IOT disponible.");
 
 			//printf("Lo agregue a bloquados\n");
-			agregar_primero_entrada_salida(listaBloqueados,instruccion);
+			//agregar_primero_entrada_salida(listaBloqueados,instruccion);
+			agregar_entrada_salida(listaBloqueados,instruccion);
 			pthread_mutex_unlock(&mutexListaBloqueados);
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la lista de Bloqueados.");
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"DEBUG","El proceso se fue a E/S.");
