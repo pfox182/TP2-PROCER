@@ -71,7 +71,7 @@ void * STS_funcion (){
 		if ( las_listas_estan_vacias_sts() != 0 ){
 
 			//TODO: la prioridad maxima debe ser variable.
-			for (prioridad = 1; prioridad < prioridad_maxima()+1; ++prioridad) {
+			for (prioridad = 0; prioridad < prioridad_maxima()+1; ++prioridad) {
 				pthread_mutex_lock(&mutexVarLPN);
 				if(prioridad == lpn){
 					if (listaProcesosNuevos != NULL){

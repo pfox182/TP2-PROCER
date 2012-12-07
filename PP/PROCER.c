@@ -15,6 +15,7 @@
 #include "PROCER_funciones.h"
 
 //Prototipos
+int tengo_que_contar_quantum(char* instruccion);
 int es_un_token_nulo(char *palabra);
 int enviar_proceso_terminado(proceso proceso);
 int liberar_proceso(proceso *proceso);
@@ -104,14 +105,13 @@ void * PROCER_funcion(){
 				   }
 					//Leemos la siguiente instruccion a ejecutar
 					instruccion = leer_instruccion(proceso.pcb.codigo,*seccion_a_ejecutar.contador_instruccion);
-					while( es_un_token_nulo(instruccion)==0){
-						instruccion = leer_instruccion(proceso.pcb.codigo,*seccion_a_ejecutar.contador_instruccion);
-						++(*seccion_a_ejecutar.contador_instruccion);
-					}
+
 					if( instruccion != NULL){
 						//Calculo la proxima instruccion a leer
 						++(*seccion_a_ejecutar.contador_instruccion);
-						cont_quantum++;
+						if( tengo_que_contar_quantum(instruccion) == 0){
+							cont_quantum++;
+						}
 
 						if( strcmp(instruccion,seccion_a_ejecutar.nombre_seccion) != 0){//No es el fin de la seccion a ejecutar
 							agregar_a_pila_ejecucion(seccion_a_ejecutar,proceso.pila_ejecucion);
@@ -159,7 +159,22 @@ void * PROCER_funcion(){
 	}
 	return 0;
 }
+int tengo_que_contar_quantum(char* instruccion){
+	char *palabra;
+	char *resto=(char *)malloc(strlen(instruccion));
+	strcpy(resto,instruccion);
 
+	while( resto != NULL){
+		palabra = strtok(resto," ");
+		resto = strtok(NULL,"\0");
+
+		if( es_un_token_nulo(palabra)){
+			return 1;
+		}
+	}
+
+	return 0;
+}
 int  es_un_token_nulo(char *palabra){
 	if( strcmp("variables",palabra)==0 || strcmp("comienzo_programa",palabra)==0 || strcmp("",palabra)==0 ) {
 		return 0;
