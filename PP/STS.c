@@ -16,6 +16,7 @@
 #include "../Estructuras/manejo_listas.h"
 
 //Variables globales
+extern int spn;
 double prioridad_anterior = 0;
 extern char *lpl;
 extern int cant_instrucciones_ejecutadas;
@@ -49,6 +50,9 @@ extern pthread_mutex_t mutexVarFinQuantum;
 extern pthread_mutex_t mutexVarFinIO;
 extern pthread_mutex_t mutexVarLPL;
 
+extern sem_t *sem_sts;
+extern sem_t *sem_procer;
+
 //Prototipos
 void planificar(nodo_proceso**);
 nodo_proceso** planificarPorFIFO(nodo_proceso**);
@@ -60,22 +64,23 @@ nodo_proceso **ordenaPorPrioridad(nodo_proceso **listaAPlanificar, int n);
 nodo_proceso **ordenaPorPrioridadSPN(nodo_proceso **listaAPlanificar, int n);
 nodo_proceso **ordenaPorPrioridadFIFORR(nodo_proceso **listaAPlanificar, int n);
 int cantidad_nodos(nodo_proceso **listaAPlanificar);
-int las_listas_estan_vacias_sts();
+//int las_listas_estan_vacias_sts();
 int prioridad_maxima();
 //AUX
 
 void * STS_funcion (){
 	unsigned int prioridad;
 
-	while(1){
-		if ( las_listas_estan_vacias_sts() != 0 ){
+	prioridad_anterior=spn;
 
-			//TODO: la prioridad maxima debe ser variable.
+	while(1){
+		printf("Estoy en el STS antes de esperar\n");
+		sem_wait(sem_sts);
+		printf("Deje de esperar en el STS\n");
 			for (prioridad = 0; prioridad < prioridad_maxima()+1; ++prioridad) {
 				pthread_mutex_lock(&mutexVarLPN);
 				if(prioridad == lpn){
 					if (listaProcesosNuevos != NULL){
-						//TODO:Implementar semaforos
 						//printf("Entre en esperar en STS,con semaforo\n");
 
 						pthread_mutex_lock(&mutexListaListos);
@@ -125,18 +130,19 @@ void * STS_funcion (){
 
 			}
 
-			//printf("Estoy por planificar\n");
-			pthread_mutex_lock(&mutexListaListos);
-			//mostrar_lista(listaProcesosListos);
-			planificar(listaProcesosListos);
-			//printf("Sali de planificar\n");
-			//mostrar_lista(listaProcesosListos);
-			pthread_mutex_unlock(&mutexListaListos);
-			//printf("Libere el semaforo de listos\n");
+			printf("La lista de listos antes de planificar es:\n");
+			mostrar_lista(listaProcesosListos);
+			printf("*****************:\n");
 
-		}else{
-			sleep(1);
-		}
+			pthread_mutex_lock(&mutexListaListos);
+			planificar(listaProcesosListos);
+			pthread_mutex_unlock(&mutexListaListos);
+
+			printf("La lista de listos despues de planificar es:\n");
+			mostrar_lista(listaProcesosListos);
+			printf("*****************:\n");
+
+			sem_post(sem_procer);
 	}
 	return 0;
 }
@@ -145,7 +151,7 @@ void * STS_funcion (){
 void planificar(nodo_proceso **listaAPlanificar){
 	pthread_mutex_lock(&mutexVarLPL);
 	if ( strcmp(lpl,"FIFO") == 0) {
-		//planificarPorFIFO(listaAPlanificar);
+		planificarPorFIFO(listaAPlanificar);
 	}
 	if ( strcmp(lpl,"RR") == 0) {
 		planificarPorRR(listaAPlanificar);
@@ -320,12 +326,12 @@ int cantidad_nodos(nodo_proceso **listaAPlanificar){
 	return cant_nodos;
 }
 
-int las_listas_estan_vacias_sts(){
-	if( *listaProcesosNuevos == NULL && *listaProcesosReanudados == NULL && *listaFinQuantum == NULL && *listaFinIO == NULL){
-		return 0;
-	}
-	return 1;
-}
+//int las_listas_estan_vacias_sts(){
+//	if( *listaProcesosNuevos == NULL && *listaProcesosReanudados == NULL && *listaFinQuantum == NULL && *listaFinIO == NULL){
+//		return 0;
+//	}
+//	return 1;
+//}
 
 int prioridad_maxima(){
 	int prioridad_max=lpn;

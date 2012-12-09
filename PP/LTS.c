@@ -25,7 +25,7 @@
 #include "LTS_demorado.h"
 
 //aux
-void mostrar_funciones(stack *pila);
+//void mostrar_funciones(stack *pila);
 
 //Prototipos de funcion
 int server_socket(char *port);
@@ -39,10 +39,14 @@ extern unsigned int mps,mmp,max_mps,max_mmp; //Se usa extern para indicar que so
 extern char* puerto;
 	//Semaforos
 extern pthread_mutex_t mutexListaNuevos;
+extern pthread_mutex_t mutexListaDemorados;
 extern pthread_mutex_t mutexVarMaxMMP;
 extern pthread_mutex_t mutexVarMaxMPS;
 extern pthread_mutex_t mutexVarMMP;
 extern pthread_mutex_t mutexVarMPS;
+
+extern sem_t *sem_sts;
+extern sem_t *sem_lts_demorado;
 
 //Listas
 extern nodo_proceso **listaProcesosNuevos;
@@ -195,6 +199,7 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 				pthread_mutex_lock(&mutexListaNuevos);
 				agregar_proceso(listaProcesosNuevos,proceso);
 				pthread_mutex_unlock(&mutexListaNuevos);
+				sem_post(sem_sts);
 				logx(proceso.pcb.pid,"LTS",id_hilo,"LSCH","Agregue el proceso a la lista de Nuevos.");
 
 				pthread_mutex_lock(&mutexVarMPS);
@@ -245,7 +250,13 @@ int validar_mps_mmp(int cliente_sock){
 			pthread_mutex_unlock(&mutexVarMPS);
 			pthread_mutex_unlock(&mutexVarMaxMPS);
 			enviar_mensaje("Se sobrepaso el maximo de multiprogramacion(mmp), se encolara su solicitud.\n",cliente_sock);
+
+			pthread_mutex_lock(&mutexListaDemorados);
 			encolar_solicitud(listaConeccionesDemoradas,cliente_sock);
+			pthread_mutex_unlock(&mutexListaDemorados);
+
+			sem_post(sem_lts_demorado);
+
 			return -2;
 		}
 

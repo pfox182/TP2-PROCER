@@ -19,7 +19,7 @@ int tengo_que_contar_quantum(char* instruccion);
 int es_un_token_nulo(char *palabra);
 int enviar_proceso_terminado(proceso proceso);
 int liberar_proceso(proceso *proceso);
-int las_listas_estan_vacias_procer();
+//int las_listas_estan_vacias_procer();
 int cantidad_nodos(nodo_proceso **listaAPlanificar);
 
 //Variables globales pp.c
@@ -35,6 +35,9 @@ extern pthread_mutex_t mutexVarMMP;
 extern pthread_mutex_t mutexVarMPS;
 extern pthread_mutex_t mutexVarCantInstruccionesEjecutadas;
 
+extern sem_t *sem_lts_suspendido;
+extern sem_t *sem_procer;
+
 //Listas globales
 extern nodo_proceso **listaProcesosListos;
 extern nodo_proceso **listaProcesosSuspendidos;
@@ -48,7 +51,7 @@ void * PROCER_funcion(){
 	id_hilo_procer=pthread_self();
 
 	while(1){
-		if ( las_listas_estan_vacias_procer() != 0 ){
+		sem_wait(sem_procer);
 			pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
 			cant_instrucciones_ejecutadas=0;
 			pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
@@ -92,6 +95,7 @@ void * PROCER_funcion(){
 				   pthread_mutex_lock(&mutexListaSuspendidos);
 				   agregar_proceso(listaProcesosSuspendidos,proceso);
 				   pthread_mutex_unlock(&mutexListaSuspendidos);
+				   sem_post(sem_lts_suspendido);
 				   logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la lista de Suspendidos.");
 
 				   pthread_mutex_unlock(&mutexVarSuspendido);
@@ -154,9 +158,6 @@ void * PROCER_funcion(){
 				}
 			}
 			cont_quantum=0;
-		}else{
-			sleep(1);
-		}
 	}
 	return 0;
 }
@@ -290,12 +291,12 @@ int liberar_proceso(proceso *proceso){
 	return 0;
 }
 
-int las_listas_estan_vacias_procer(){
-	if( *listaProcesosListos == NULL ){
-		return 0;
-	}
-	return 1;
-}
+//int las_listas_estan_vacias_procer(){
+//	if( *listaProcesosListos == NULL ){
+//		return 0;
+//	}
+//	return 1;
+//}
 
 //auxiliar
 void mostrar_datos(data *datos){

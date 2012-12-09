@@ -20,17 +20,19 @@
 #include "../Log/manejo_log.h"
 
 //Prototipos de funcion
-int lista_esta_vacia_LTS_demorado();
+//int lista_esta_vacia_LTS_demorado();
 int validar_mmp_demorado(int cliente_sock);
 
 //Variables globales
-extern unsigned int mps,mmp,max_mps,max_mmp; //Se usa extern para indicar que son variables globales de otro archivo
+extern unsigned int mmp,max_mmp; //Se usa extern para indicar que son variables globales de otro archivo
 	//Semaforos
 extern pthread_mutex_t mutexListaNuevos;
+extern pthread_mutex_t mutexListaDemorados;
 extern pthread_mutex_t mutexVarMaxMMP;
-extern pthread_mutex_t mutexVarMaxMPS;
 extern pthread_mutex_t mutexVarMMP;
-extern pthread_mutex_t mutexVarMPS;
+
+extern sem_t *sem_lts_demorado;
+extern sem_t *sem_sts;
 
 extern coneccionesDemoradas **listaConeccionesDemoradas;
 extern nodo_proceso **listaProcesosNuevos;
@@ -43,15 +45,17 @@ void * LTS_demorado(void * var){
 	char *paso_mensaje=(char *)malloc(256);
 
 	while(1){
-		if(  lista_esta_vacia_LTS_demorado() != 0 ){
-
+		sem_wait(sem_lts_demorado);
 			pthread_t id_hilo=pthread_self();
 
 			int retorno;
 			int socket_demorado;
 			proceso proceso;
 
+			pthread_mutex_lock(&mutexListaDemorados);
 			if((socket_demorado=sacar_conexion_demorada(listaConeccionesDemoradas))>0){
+				pthread_mutex_unlock(&mutexListaDemorados);
+
 				pthread_mutex_lock(&mutexVarMMP);
 				pthread_mutex_unlock(&mutexVarMMP);
 				if( (retorno = validar_mmp_demorado(socket_demorado)) == 0){
@@ -76,6 +80,9 @@ void * LTS_demorado(void * var){
 					pthread_mutex_lock(&mutexListaNuevos);
 					agregar_proceso(listaProcesosNuevos,proceso);
 					pthread_mutex_unlock(&mutexListaNuevos);
+
+					sem_post(sem_sts);
+
 					logx(proceso.pcb.pid,"LTS_demorado",id_hilo,"LSCH","Agregue el proceso a la lista de Nuevos.");
 
 					pthread_mutex_lock(&mutexVarMMP);
@@ -92,22 +99,21 @@ void * LTS_demorado(void * var){
 				}
 
 				//FD_CLR(socket_demorado,&(*master));
+			}else{
+				pthread_mutex_unlock(&mutexListaDemorados);
 			}
 			sleep(1);
-		}else{
-			sleep(1);
-		}
 	}
 
 	return 0;
 }
 
-int lista_esta_vacia_LTS_demorado(){
-	if( *listaConeccionesDemoradas == NULL ){
-		return 0;
-	}
-	return 1;
-}
+//int lista_esta_vacia_LTS_demorado(){
+//	if( *listaConeccionesDemoradas == NULL ){
+//		return 0;
+//	}
+//	return 1;
+//}
 
 int validar_mmp_demorado(int cliente_sock){
 
@@ -116,7 +122,12 @@ int validar_mmp_demorado(int cliente_sock){
 	if( mmp >= max_mmp){//Si no entra al if => todo. ok
 		pthread_mutex_unlock(&mutexVarMMP);
 		pthread_mutex_unlock(&mutexVarMaxMMP);
+
+		pthread_mutex_lock(&mutexListaDemorados);
 		encolar_solicitud(listaConeccionesDemoradas,cliente_sock);
+		pthread_mutex_unlock(&mutexListaDemorados);
+
+		sem_post(sem_lts_demorado);
 
 		return -2;
 

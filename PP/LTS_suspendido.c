@@ -29,14 +29,16 @@ extern nodo_proceso **listaProcesosSuspendidos;
 //Variables Globales
 extern unsigned int mmp;
 extern unsigned int max_mmp;
-extern int lpr;
 extern pthread_mutex_t mutexListaSuspendidos;
 extern pthread_mutex_t mutexListaReanudados;
 extern pthread_mutex_t mutexVarMaxMMP;
 extern pthread_mutex_t mutexVarMMP;
 
+extern sem_t *sem_lts_suspendido;
+extern sem_t *sem_sts;
+
 //Prototipos
-int las_listas_estan_vacias_lts();
+//int las_listas_estan_vacias_lts();
 
 
 void *LTS_suspendido(){
@@ -59,8 +61,7 @@ void *LTS_suspendido(){
 	pthread_t id_hilo=pthread_self();
 
 	while(1){
-		if ( las_listas_estan_vacias_lts() != 0 ){
-
+		sem_wait(sem_lts_suspendido);
 			char *respuestaReanudo=(char *)malloc(strlen("si"));
 			bzero(respuestaReanudo,strlen("si"));
 			char *numero=(char *)malloc(strlen("00000"));
@@ -166,6 +167,9 @@ void *LTS_suspendido(){
 					pthread_mutex_lock(&mutexListaReanudados);
 					agregar_proceso(listaProcesosReanudados,proceso);
 					pthread_mutex_unlock(&mutexListaReanudados);
+
+					sem_post(sem_sts);
+
 					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaProcesosReanudados.");
 
 				}else{
@@ -175,6 +179,9 @@ void *LTS_suspendido(){
 					pthread_mutex_lock(&mutexListaSuspendidos);
 					agregar_proceso(listaProcesosSuspendidos,proceso);
 					pthread_mutex_unlock(&mutexListaSuspendidos);
+
+					sem_post(sem_lts_suspendido);
+
 					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaSuspendidos.");
 
 					enviar_mensaje(msjMMP,proceso.cliente_sock);
@@ -186,6 +193,9 @@ void *LTS_suspendido(){
 				pthread_mutex_lock(&mutexListaSuspendidos);
 				agregar_proceso(listaProcesosSuspendidos,proceso);
 				pthread_mutex_unlock(&mutexListaSuspendidos);
+
+				sem_post(sem_lts_suspendido);
+
 				logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaSuspendidos.");
 			}
 
@@ -199,16 +209,13 @@ void *LTS_suspendido(){
 			free(msjVariables);
 
 
-		}else{
-			sleep(1);
-		}
 	}
 	return 0;
 }
 
-int las_listas_estan_vacias_lts(){
-	if( *listaProcesosSuspendidos == NULL ){
-		return 0;
-	}
-	return 1;
-}
+//int las_listas_estan_vacias_lts(){
+//	if( *listaProcesosSuspendidos == NULL ){
+//		return 0;
+//	}
+//	return 1;
+//}

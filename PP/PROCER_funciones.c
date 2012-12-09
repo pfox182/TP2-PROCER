@@ -29,6 +29,9 @@ extern pthread_mutex_t mutexVarEsperaEstandar;
 extern pthread_mutex_t mutexVarCantIOTDisponibles;
 extern pthread_mutex_t mutexVarCantInstruccionesEjecutadas;
 
+extern sem_t *sem_sts;
+extern sem_t *sem_io;
+
 //Listas globales
 extern nodo_entrada_salida **listaBloqueados;
 extern nodo_proceso **listaFinQuantum;
@@ -46,6 +49,7 @@ int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned i
 			agregar_proceso(listaFinQuantum,proceso);
 			printf("Agregue el proceso %d a fin de quantum\n",proceso.pcb.pid);
 			pthread_mutex_unlock(&mutexListaFinQuantum);
+			sem_post(sem_sts);
 
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"INFO","Se sobrepaso el quantum.");
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la Lista de fin de quantum.");
@@ -598,6 +602,7 @@ int ejecutar_imprimir(char *resto,proceso proceso){
 	pthread_mutex_lock(&mutexListaBloqueados);
 	agregar_entrada_salida(listaBloqueados,instruccion);
 	pthread_mutex_unlock(&mutexListaBloqueados);
+	sem_post(sem_io);
 	logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la lista de Bloqueados.");
 
 	logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"DEBUG","El proceso se fue a E/S.");
@@ -639,6 +644,7 @@ int ejecutar_io(char *palabra,proceso proceso){
 		pthread_mutex_lock(&mutexListaBloqueados);
 		agregar_entrada_salida(listaBloqueados,instruccion);
 		pthread_mutex_unlock(&mutexListaBloqueados);
+		sem_post(sem_io);
 		logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la lista de Bloqueados.");
 
 		logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"DEBUG","El proceso se fue a E/S.");
@@ -652,14 +658,14 @@ int ejecutar_io(char *palabra,proceso proceso){
 		if( cant_iot_disponibles > 0){
 			pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
 			proceso.pcb.pc++;
-			pthread_mutex_lock(&mutexListaBloqueados);
-
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"DEBUG","La instruccion de io no bloqueante encontro un hilo de IOT disponible.");
 
-			//printf("Lo agregue a bloquados\n");
 			//agregar_primero_entrada_salida(listaBloqueados,instruccion);
+			pthread_mutex_lock(&mutexListaBloqueados);
 			agregar_entrada_salida(listaBloqueados,instruccion);
 			pthread_mutex_unlock(&mutexListaBloqueados);
+			sem_post(sem_io);
+
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"LSCH","Se agrego el proceso a la lista de Bloqueados.");
 			logx(proceso.pcb.pid,"PROCER",id_hilo_procer,"DEBUG","El proceso se fue a E/S.");
 		}else{

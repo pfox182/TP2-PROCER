@@ -38,6 +38,15 @@ pthread_mutex_t mutexListaBloqueados = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexListaFinQuantum = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexListaFinIO = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexListaListos = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexListaDemorados = PTHREAD_MUTEX_INITIALIZER;
+
+	//Semaforos de hilos
+sem_t *sem_ej;
+sem_t *sem_sts;
+sem_t *sem_procer;
+sem_t *sem_io;
+sem_t *sem_lts_suspendido;
+sem_t *sem_lts_demorado;
 
 	//Variables modificables en tiempo de ejcucion
 pthread_mutex_t mutexVarMaxMMP = PTHREAD_MUTEX_INITIALIZER;
@@ -54,6 +63,7 @@ pthread_mutex_t mutexVarEsperaEstandar = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexVarCantIOTDisponibles = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexVarAlfa = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexVarCantInstruccionesEjecutadas = PTHREAD_MUTEX_INITIALIZER;
+
 
 //***************************
 
@@ -73,6 +83,7 @@ char *espera_estandar;
 char *espera_estandar_io;
 unsigned int cantidad_hilos_iot; //Valor de hilos IOT
 double alfa;
+int spn;
 
 //Variables globales propias
 int suspendido=0;
@@ -110,6 +121,21 @@ int main(int argc, char *argv[])
    pthread_mutex_init(&mutexListaFinQuantum,NULL);
    pthread_mutex_init(&mutexListaFinIO,NULL);
    pthread_mutex_init(&mutexListaListos,NULL);
+   pthread_mutex_init(&mutexListaDemorados,NULL);
+
+   //Inicializar semaforos de hilos
+   sem_ej = malloc(sizeof(sem_t));
+   sem_init(sem_ej, 0, 0);
+   sem_sts = malloc(sizeof(sem_t));
+   sem_init(sem_sts, 0, 0);
+   sem_procer = malloc(sizeof(sem_t));
+   sem_init(sem_procer, 0, 0);
+   sem_io = malloc(sizeof(sem_t));
+   sem_init(sem_io, 0, 0);
+   sem_lts_suspendido = malloc(sizeof(sem_t));
+   sem_init(sem_lts_suspendido, 0, 0);
+   sem_lts_demorado = malloc(sizeof(sem_t));
+   sem_init(sem_lts_demorado, 0, 0);
 
    pthread_mutex_init(&mutexVarMaxMMP,NULL);
    pthread_mutex_init(&mutexVarMaxMPS,NULL);
@@ -398,6 +424,13 @@ int cargar_archivo_configuracion(){
 			valor = strtok(NULL,";");
 			if( valor != NULL ){
 				alfa=atof(valor);
+			}
+		}
+		if( strstr(linea,"spn")){
+			valor = strtok(linea," ");
+			valor = strtok(NULL,";");
+			if( valor != NULL ){
+				spn=atoi(valor);
 			}
 		}
 

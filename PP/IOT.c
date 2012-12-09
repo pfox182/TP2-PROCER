@@ -20,7 +20,7 @@
 
 
 //PROTORIPOS
-int las_listas_estan_vacias_iot();
+//int las_listas_estan_vacias_iot();
 
 //Listas globales
 extern nodo_proceso **listaFinIO;
@@ -33,6 +33,8 @@ extern pthread_mutex_t mutexListaBloqueados;
 extern pthread_mutex_t mutexListaFinIO;
 extern pthread_mutex_t mutexVarCantIOTDisponibles;
 
+extern sem_t *sem_sts;
+extern sem_t *sem_io;
 extern int finIO;
 
 void * IOT_funcion(){
@@ -43,7 +45,7 @@ void * IOT_funcion(){
 	printf("Soy el hilo de IOT creandome, con id=%lu\n",id_hilo);
 
 	while(1){
-			if ( las_listas_estan_vacias_iot() != 0 ){
+			sem_wait(sem_io);
 
 				pthread_mutex_lock(&mutexListaBloqueados);
 				instruccion=sacar_entrada_salida(listaBloqueados);
@@ -80,6 +82,7 @@ void * IOT_funcion(){
 					pthread_mutex_lock(&mutexListaFinIO);
 					agregar_proceso(listaFinIO,instruccion.proceso);
 					pthread_mutex_unlock(&mutexListaFinIO);
+					sem_post(sem_sts);
 					logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"LSCH","Se agrego el proceso a ListaFinIO.");
 
 
@@ -96,6 +99,7 @@ void * IOT_funcion(){
 					pthread_mutex_lock(&mutexListaFinIO);
 					agregar_proceso(listaFinIO,instruccion.proceso);
 					pthread_mutex_unlock(&mutexListaFinIO);
+					sem_post(sem_sts);
 					logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"LSCH","Se agrego el proceso a ListaFinIO.");
 
 
@@ -106,17 +110,13 @@ void * IOT_funcion(){
 				pthread_mutex_unlock(&mutexVarCantIOTDisponibles);
 				logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"DEBUG","Se libero un hilo IOT(cant_iot_disponibles).");
 
-
-		}else{
-			sleep(1);
-		}
 	}
 	return 0;
 }
 
-int las_listas_estan_vacias_iot(){
-	if( *listaBloqueados == NULL ){
-		return 0;
-	}
-	return 1;
-}
+//int las_listas_estan_vacias_iot(){
+//	if( *listaBloqueados == NULL ){
+//		return 0;
+//	}
+//	return 1;
+//}
