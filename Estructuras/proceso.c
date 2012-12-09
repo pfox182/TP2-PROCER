@@ -105,9 +105,9 @@ data* cargar_datos(char *buffer){
 	datos=realloc(datos,sizeof(data)*i);
 	//printf("Hice el realloc en el cargar datos\n");
 
-	if( resto != NULL ){
-		free(resto);
-	}
+//	if( resto != NULL ){
+//		free(resto);
+//	}
 	//printf("Hice el free en el cargar datos\n");
 
 	return puntero;
@@ -141,9 +141,9 @@ stack* sacar_funciones(char *buffer){
 	}
 	//printf("Sali del while\n");
 
-	if( resto != NULL ){
-		free(resto);
-	}
+//	if( resto != NULL ){
+//		free(resto);
+//	}
 
 	return *lista_funciones;
 }

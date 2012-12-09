@@ -680,6 +680,6 @@ int ejecutar_io(char *palabra,proceso proceso){
 
 	}
 
-	if( log_text != NULL){free(log_text);}
+//	if( log_text != NULL){free(log_text);}
 	return 0;
 }

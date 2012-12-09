@@ -289,7 +289,7 @@ int comprobar_archivo_configuracion(){
 		}
 	}
 
-	free(texto_del_archivo);
+//	free(texto_del_archivo);
 	return 0;
 }
 
@@ -436,7 +436,7 @@ int cargar_archivo_configuracion(){
 
 	}
 
-	free(texto_del_archivo);
+//	free(texto_del_archivo);
 	return 0;
 }
 // FUNCION QUE MANEJA LA SEÑAL DEL SIGUSR1 PI.

@@ -47,7 +47,7 @@ proceso sacar_proceso(nodo_proceso **lista_procesos){
 
 		proceso = primero->proceso;
 
-		free(primero);
+		//free(primero);
 	}
 
 	return proceso;
