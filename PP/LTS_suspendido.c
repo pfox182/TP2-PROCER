@@ -173,7 +173,7 @@ void *LTS_suspendido(){
 						sem_post(sem_sts);
 
 						logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaProcesosReanudados.");
-
+						break;
 					}else{
 						pthread_mutex_unlock(&mutexVarMaxMMP);
 						pthread_mutex_unlock(&mutexVarMMP);
