@@ -62,6 +62,7 @@ void *LTS_suspendido(){
 
 	while(1){
 		sem_wait(sem_lts_suspendido);
+			int seMostro=0;
 			char *respuestaReanudo=(char *)malloc(strlen("si"));
 			bzero(respuestaReanudo,strlen("si"));
 			char *numero=(char *)malloc(strlen("00000"));
@@ -154,40 +155,51 @@ void *LTS_suspendido(){
 
 
 			if ( (strstr(respuestaReanudo,"si")) != NULL ){
-				pthread_mutex_lock(&mutexVarMaxMMP);
-				pthread_mutex_lock(&mutexVarMMP);
-				if ( mmp < max_mmp ){
-					pthread_mutex_unlock(&mutexVarMaxMMP);
-					pthread_mutex_unlock(&mutexVarMMP);
-
+				while(1){
+					pthread_mutex_lock(&mutexVarMaxMMP);
 					pthread_mutex_lock(&mutexVarMMP);
-					mmp++;
-					pthread_mutex_unlock(&mutexVarMMP);
+					if ( mmp < max_mmp ){
+						pthread_mutex_unlock(&mutexVarMaxMMP);
+						pthread_mutex_unlock(&mutexVarMMP);
 
-					pthread_mutex_lock(&mutexListaReanudados);
-					agregar_proceso(listaProcesosReanudados,proceso);
-					pthread_mutex_unlock(&mutexListaReanudados);
+						pthread_mutex_lock(&mutexVarMMP);
+						mmp++;
+						pthread_mutex_unlock(&mutexVarMMP);
 
-					sem_post(sem_sts);
+						pthread_mutex_lock(&mutexListaReanudados);
+						agregar_proceso(listaProcesosReanudados,proceso);
+						pthread_mutex_unlock(&mutexListaReanudados);
 
-					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaProcesosReanudados.");
+						sem_post(sem_sts);
 
-				}else{
-					pthread_mutex_unlock(&mutexVarMaxMMP);
-					pthread_mutex_unlock(&mutexVarMMP);
+						logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaProcesosReanudados.");
 
-					pthread_mutex_lock(&mutexListaSuspendidos);
-					agregar_proceso(listaProcesosSuspendidos,proceso);
-					pthread_mutex_unlock(&mutexListaSuspendidos);
+					}else{
+						pthread_mutex_unlock(&mutexVarMaxMMP);
+						pthread_mutex_unlock(&mutexVarMMP);
 
-					sem_post(sem_lts_suspendido);
-
-					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaSuspendidos.");
-
-					enviar_mensaje(msjMMP,proceso.cliente_sock);
-					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","Se envio el mensaje que se supero MMP.");
-					sleep(2);
+						if( seMostro == 0){
+						enviar_mensaje(msjMMP,proceso.cliente_sock);
+						logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","Se envio el mensaje que se supero MMP.");
+						seMostro=1;
+						}
+					}
+					sleep(1);
 				}
+//					pthread_mutex_unlock(&mutexVarMaxMMP);
+//					pthread_mutex_unlock(&mutexVarMMP);
+//
+//					pthread_mutex_lock(&mutexListaSuspendidos);
+//					agregar_proceso(listaProcesosSuspendidos,proceso);
+//					pthread_mutex_unlock(&mutexListaSuspendidos);
+//
+//					sem_post(sem_lts_suspendido);
+//
+//					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"LSCH","Se agrego el proceso a ListaSuspendidos.");
+//
+//					enviar_mensaje(msjMMP,proceso.cliente_sock);
+//					logx(proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","Se envio el mensaje que se supero MMP.");
+//					sleep(2);
 
 			}else{
 				pthread_mutex_lock(&mutexListaSuspendidos);
