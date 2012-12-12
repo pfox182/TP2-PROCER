@@ -15,7 +15,7 @@
 
 
 //Variables globales
-extern int cant_instrucciones_ejecutadas;
+
 extern char *lpl;
 extern int finQ;
 extern unsigned int quantum_max;
@@ -27,7 +27,7 @@ extern pthread_mutex_t mutexVarFinQuantum;
 extern pthread_mutex_t mutexListaBloqueados;
 extern pthread_mutex_t mutexVarEsperaEstandar;
 extern pthread_mutex_t mutexVarCantIOTDisponibles;
-extern pthread_mutex_t mutexVarCantInstruccionesEjecutadas;
+
 
 extern sem_t *sem_sts;
 extern sem_t *sem_io;
@@ -119,6 +119,14 @@ int ejecutar_instruccion(char * instruccion,proceso *proceso,seccion *seccion_ej
 		}
 
 		if( es_una_variable(palabra) == 0){//De la forma a=1 o a=b+c
+			pthread_mutex_lock(&mutexVarLPL);
+				if( strcmp(lpl,"SPN") == 0){
+					pthread_mutex_unlock(&mutexVarLPL);
+					proceso->instrucciones_spn++;
+					proceso->es_instruccion_spn=1;
+				}else{
+					pthread_mutex_unlock(&mutexVarLPL);
+				}
 			if ( ejecutar_asignacion(palabra,(*proceso)) == 1){
 				return 1;
 			}
@@ -129,7 +137,15 @@ int ejecutar_instruccion(char * instruccion,proceso *proceso,seccion *seccion_ej
 		}
 
 		if( es_un_salto(palabra) == 0){//De la forma snc o ssc
+			if( strcmp(lpl,"SPN") == 0){
+				pthread_mutex_unlock(&mutexVarLPL);
+				proceso->instrucciones_spn++;
+				proceso->es_instruccion_spn=1;
+			}else{
+				pthread_mutex_unlock(&mutexVarLPL);
+			}
 			ejecutar_salto(palabra,resto,(*proceso).pcb,seccion_ejecutandose);//Le tengo que pasar la instruccion ej: snc b inicio_for
+
 			break;
 		}
 
@@ -255,9 +271,6 @@ unsigned int buscar_inicio_de_funcion(char *nombre_funcion,char *codigo){
 int ejecutar_asignacion(char *palabra,proceso proceso){//ej: a+c;3
 	char *log_text=(char *)malloc(256);
 
-	pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
-	cant_instrucciones_ejecutadas++;
-	pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
 
 	int i,anterior;
 	pcb pcb=proceso.pcb;
@@ -481,9 +494,9 @@ int es_un_delimitador(char caracter){
 int ejecutar_salto(char *tipo_de_salto,char *resto,pcb pcb,seccion *seccion_ejecutandose){
 	char *log_text=(char *)malloc(256);
 
-	pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
-	cant_instrucciones_ejecutadas++;
-    pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
+	//pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
+	//cant_instrucciones_ejecutadas++;
+    //pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
 
 	char variable,*etiqueta;
 	int valor_de_variable,posicion_etiqueta;

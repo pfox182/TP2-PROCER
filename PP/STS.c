@@ -17,9 +17,7 @@
 
 //Variables globales
 extern int spn;
-double prioridad_anterior = 0;
 extern char *lpl;
-extern int cant_instrucciones_ejecutadas;
 extern double alfa;
 extern int prioridad_FIFO_RR;
 
@@ -59,7 +57,7 @@ nodo_proceso** planificarPorFIFO(nodo_proceso**);
 nodo_proceso** planificarPorRR(nodo_proceso **listaAPlanificar);
 nodo_proceso** planificarPorPRI(nodo_proceso **listaAPlanificar);
 nodo_proceso **planificarPorSPN(nodo_proceso **listaAPlanificar);
-double calcular_prioridad_spn();
+double calcular_prioridad_spn(proceso proceso);
 nodo_proceso **ordenaPorPrioridad(nodo_proceso **listaAPlanificar, int n);
 nodo_proceso **ordenaPorPrioridadSPN(nodo_proceso **listaAPlanificar, int n);
 nodo_proceso **ordenaPorPrioridadFIFORR(nodo_proceso **listaAPlanificar, int n);
@@ -71,7 +69,6 @@ int prioridad_maxima();
 void * STS_funcion (){
 	unsigned int prioridad;
 
-	prioridad_anterior=spn;
 
 	while(1){
 		printf("Estoy en el STS antes de esperar\n");
@@ -181,23 +178,36 @@ nodo_proceso **planificarPorSPN(nodo_proceso **listaAPlanificar){
 	nodo_proceso *listaAux = *listaAPlanificar;
 
 	while( listaAux != NULL ){
-		listaAux->proceso.prioridad_spn = calcular_prioridad_spn();
+		printf("La prioridad spn antes de calcularla del proceso %d es SPN:%f\n",listaAux->proceso.pcb.pid,listaAux->proceso.prioridad_spn);
+		listaAux->proceso.prioridad_spn = calcular_prioridad_spn(listaAux->proceso);
+		listaAux->proceso.es_instruccion_spn=0;
+		printf("La prioridad spn del proceso %d es SPN:%f\n",listaAux->proceso.pcb.pid,listaAux->proceso.prioridad_spn);
 		listaAux = listaAux->sig;
 	}
 
 	return ordenaPorPrioridadSPN(listaAPlanificar,cantidad_nodos(listaAPlanificar));
 }
-double calcular_prioridad_spn(){
+double calcular_prioridad_spn(proceso proceso){
 	double prioridad;
 
-	pthread_mutex_lock(&mutexVarAlfa);
-	pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
-	prioridad = prioridad_anterior * alfa + cant_instrucciones_ejecutadas * ( 1 - alfa);
-	pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
-	pthread_mutex_unlock(&mutexVarAlfa);
+	printf("las intrucciones_spn son:%d\n",proceso.instrucciones_spn);
+	printf("ES UNA INSTRUCCION :%d\n",proceso.es_instruccion_spn);
 
-	prioridad_anterior = prioridad;
-	//printf("La prioridad spn es:%f y el alfa es:%f\n",prioridad,alfa);
+	if (proceso.instrucciones_spn != 0 && proceso.es_instruccion_spn == 1){
+
+		pthread_mutex_lock(&mutexVarAlfa);
+		pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
+		prioridad = proceso.prioridad_spn * alfa + proceso.instrucciones_spn * ( 1 - alfa);
+		printf("La prioridad calculada es:%f\n",prioridad);
+		pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
+		pthread_mutex_unlock(&mutexVarAlfa);
+
+	}else{
+
+		prioridad = proceso.prioridad_spn;
+
+
+	 }
 	return prioridad;
 }
 

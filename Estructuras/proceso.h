@@ -43,6 +43,8 @@ struct proceso{
 	pcb pcb;
 	int prioridad;
 	double prioridad_spn;
+	int instrucciones_spn;
+	int es_instruccion_spn;
 	int prioridad_FIFO_RR;
 	int cliente_sock;
 	pila_ejecucion **pila_ejecucion;

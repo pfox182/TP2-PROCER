@@ -23,7 +23,7 @@ int liberar_proceso(proceso *proceso);
 int cantidad_nodos(nodo_proceso **listaAPlanificar);
 
 //Variables globales pp.c
-int cant_instrucciones_ejecutadas;
+
 extern unsigned int mmp;
 extern unsigned int mps;
 extern int suspendido;
@@ -52,9 +52,7 @@ void * PROCER_funcion(){
 
 	while(1){
 		sem_wait(sem_procer);
-			pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
-			cant_instrucciones_ejecutadas=0;
-			pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
+
 
 			printf("PROCER - Antes de sacar de listos hay %d procesos\n",cantidad_nodos(listaProcesosListos));
 			mostrar_lista(listaProcesosListos);

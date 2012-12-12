@@ -20,9 +20,11 @@
 
 
 //Variables globales
-//TODO:semaforo pid
 extern unsigned int pid;
 extern int lpn;
+extern int spn;
+
+
 	//Semaforos
 extern pthread_mutex_t mutexVarLPN;
 
@@ -53,7 +55,9 @@ proceso crear_proceso(char *buffer,char *prioridad,int socket){
 	proceso.prioridad = atoi(prioridad);
 	pthread_mutex_unlock(&mutexVarLPN);
 
-	proceso.prioridad_spn = 0;
+	proceso.prioridad_spn = spn;
+	proceso.instrucciones_spn = 0;
+	proceso.es_instruccion_spn = 1;
 	proceso.prioridad_FIFO_RR = 0;
 
 	proceso.pila_ejecucion = (pila_ejecucion **)malloc(sizeof(pila_ejecucion));
