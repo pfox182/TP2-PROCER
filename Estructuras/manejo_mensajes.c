@@ -52,7 +52,7 @@ int recibir_mensaje(char** mensaje,int socket_client){
 
 		 //printf("El header recibido es: %d \n",header);
 		 //Seteamos el tamaño del mensaje
-		 *mensaje=(char *)realloc(*mensaje,header);
+		 //*mensaje=(char *)realloc(*mensaje,header);
 		 bzero(*mensaje,header);
 		 if (( recvall(socket_client,*mensaje,&header,0)) == -1){
 			 printf("Error al recibir datos del archivo");
