@@ -142,7 +142,7 @@ void *LTS_suspendido(){
 			//Mensaje reanudacion
 			strcat(msjVariables,msjReanudo);
 
-			//msjVariables=realloc(msjVariables,strlen(msjVariables));
+			msjVariables=realloc(msjVariables,strlen(msjVariables));
 
 			//Envio mensaje con el estado proceso suspendido y pregunto si se reanuda.
 			enviar_mensaje(msjVariables,proceso.cliente_sock);
