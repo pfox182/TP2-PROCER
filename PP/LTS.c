@@ -167,7 +167,7 @@ int server_socket(char *port)
 int administrar_conexion(int cliente_sock,fd_set *master){
 	int retorno;
 	char *paso_mensaje=(char *)malloc(256);
-	char *buffer=(char *)malloc(1);
+	char *buffer=(char *)malloc(1024);
 	char *prioridad=(char *)malloc(1);
 	proceso proceso;
 	pthread_t id_hilo=pthread_self();
