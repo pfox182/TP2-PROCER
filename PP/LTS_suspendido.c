@@ -56,7 +56,7 @@ void *LTS_suspendido(){
 	char template4[]="-------------------------\n\n- Estructura de Datos ----\n";
 	char template5[]="-------------------------\n\n- Estructura de Stack ----\n";
 	char msjReanudo[]="Desea reanudar el proceso.(si/no):";
-	char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(mmp)";
+	char msjMMP[]="No se pudo reanudar el proceso, se supero el nivel maximo de multiprogramacion(mmp), se encolara su solicitud.";
 
 	pthread_t id_hilo=pthread_self();
 

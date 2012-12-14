@@ -169,7 +169,8 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 	char *paso_mensaje=(char *)malloc(256);
 	char *buffer=(char *)malloc(1024);
 	bzero(buffer,1024);
-	char *prioridad=(char *)malloc(1);
+	char *prioridad=(char *)malloc(64);
+	bzero(prioridad,64);
 	proceso proceso;
 	pthread_t id_hilo=pthread_self();
 
@@ -179,6 +180,7 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 			if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 
 				//Creamos el proceso
+				printf("Me llego la prioridad: %s\n",prioridad);
 				proceso = crear_proceso(buffer,prioridad,cliente_sock);
 				bzero(paso_mensaje,256);
 				sprintf(paso_mensaje,"Se creo el proceso con PID=%d\n",proceso.pcb.pid);
@@ -189,7 +191,6 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 				char *log_text=(char *)malloc(127);
 				sprintf(log_text,"La prioridad del proceso es %d.",proceso.prioridad);
 				logx(proceso.pcb.pid,"LTS",id_hilo,"DEBUG",log_text);
-				bzero(buffer,1024);
 				//if( log_text != NULL ){ free(log_text);}
 	//			if ( buffer != NULL ){
 	//				free(buffer);

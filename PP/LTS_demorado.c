@@ -38,10 +38,10 @@ extern coneccionesDemoradas **listaConeccionesDemoradas;
 extern nodo_proceso **listaProcesosNuevos;
 
 void * LTS_demorado(void * var){
-	char *buffer_2=(char *)malloc(1);
-	bzero(buffer_2,1);
-	char *prioridad=(char *)malloc(1);
-	bzero(prioridad,1);
+	char *buffer_2=(char *)malloc(1024);
+	bzero(buffer_2,1024);
+	char *prioridad=(char *)malloc(64);
+	bzero(prioridad,64);
 	char *paso_mensaje=(char *)malloc(256);
 
 	while(1){
@@ -62,6 +62,7 @@ void * LTS_demorado(void * var){
 					enviar_mensaje("Enviame el codigo\n",socket_demorado);
 					recibir_mensaje(&buffer_2,socket_demorado);
 					recibir_mensaje(&prioridad,socket_demorado);
+					printf("Me llego la prioridad: %s\n",prioridad);
 					proceso = crear_proceso(buffer_2,prioridad,socket_demorado);
 
 					bzero(paso_mensaje,256);
