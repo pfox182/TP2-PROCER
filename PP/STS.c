@@ -14,6 +14,7 @@
 #include <semaphore.h>
 #include "../Estructuras/proceso.h"
 #include "../Estructuras/manejo_listas.h"
+#include "../Log/manejo_log.h"
 
 //Variables globales
 extern int spn;
@@ -71,9 +72,9 @@ void * STS_funcion (){
 
 
 	while(1){
-		printf("Estoy en el STS antes de esperar\n");
+		//printf("Estoy en el STS antes de esperar\n");
 		sem_wait(sem_sts);
-		printf("Deje de esperar en el STS\n");
+		//printf("Deje de esperar en el STS\n");
 			for (prioridad = 0; prioridad < prioridad_maxima()+1; ++prioridad) {
 				pthread_mutex_lock(&mutexVarLPN);
 				if(prioridad == lpn){
@@ -127,17 +128,17 @@ void * STS_funcion (){
 
 			}
 
-			printf("La lista de listos antes de planificar es:\n");
-			mostrar_lista(listaProcesosListos);
-			printf("*****************:\n");
+			//printf("La lista de listos antes de planificar es:\n");
+			//mostrar_lista(listaProcesosListos);
+			//printf("*****************:\n");
 
 			pthread_mutex_lock(&mutexListaListos);
 			planificar(listaProcesosListos);
 			pthread_mutex_unlock(&mutexListaListos);
 
-			printf("La lista de listos despues de planificar es:\n");
-			mostrar_lista(listaProcesosListos);
-			printf("*****************:\n");
+			//printf("La lista de listos despues de planificar es:\n");
+			//mostrar_lista(listaProcesosListos);
+			//printf("*****************:\n");
 
 			sem_post(sem_procer);
 	}
@@ -175,13 +176,16 @@ nodo_proceso **planificarPorPRI(nodo_proceso **listaAPlanificar){
 }
 
 nodo_proceso **planificarPorSPN(nodo_proceso **listaAPlanificar){
+	char *log_aux=(char *)malloc(256);
 	nodo_proceso *listaAux = *listaAPlanificar;
 
 	while( listaAux != NULL ){
-		printf("La prioridad spn antes de calcularla del proceso %d es SPN:%f\n",listaAux->proceso.pcb.pid,listaAux->proceso.prioridad_spn);
+		//printf("La prioridad spn antes de calcularla del proceso %d es SPN:%f\n",listaAux->proceso.pcb.pid,listaAux->proceso.prioridad_spn);
 		listaAux->proceso.prioridad_spn = calcular_prioridad_spn(listaAux->proceso);
 		listaAux->proceso.es_instruccion_spn=0;
-		printf("La prioridad spn del proceso %d es SPN:%f\n",listaAux->proceso.pcb.pid,listaAux->proceso.prioridad_spn);
+		//printf("La prioridad spn del proceso %d es SPN:%f\n",listaAux->proceso.pcb.pid,listaAux->proceso.prioridad_spn);
+		sprintf(log_aux,"La prioridad SPN es %f",listaAux->proceso.prioridad_spn);
+		logx(listaAux->proceso.pcb.pid,"STS",pthread_self(),"INFO",log_aux);
 		listaAux = listaAux->sig;
 	}
 
@@ -190,15 +194,15 @@ nodo_proceso **planificarPorSPN(nodo_proceso **listaAPlanificar){
 double calcular_prioridad_spn(proceso proceso){
 	double prioridad;
 
-	printf("las intrucciones_spn son:%d\n",proceso.instrucciones_spn);
-	printf("ES UNA INSTRUCCION :%d\n",proceso.es_instruccion_spn);
+	//printf("las intrucciones_spn son:%d\n",proceso.instrucciones_spn);
+	//printf("ES UNA INSTRUCCION :%d\n",proceso.es_instruccion_spn);
 
 	if (proceso.instrucciones_spn != 0 && proceso.es_instruccion_spn == 1){
 
 		pthread_mutex_lock(&mutexVarAlfa);
 		pthread_mutex_lock(&mutexVarCantInstruccionesEjecutadas);
 		prioridad = proceso.prioridad_spn * alfa + proceso.instrucciones_spn * ( 1 - alfa);
-		printf("La prioridad calculada es:%f\n",prioridad);
+		//printf("La prioridad calculada es:%f\n",prioridad);
 		pthread_mutex_unlock(&mutexVarCantInstruccionesEjecutadas);
 		pthread_mutex_unlock(&mutexVarAlfa);
 
@@ -212,7 +216,7 @@ double calcular_prioridad_spn(proceso proceso){
 }
 
 nodo_proceso **ordenaPorPrioridad(nodo_proceso **listaAPlanificar, int n) {
-	printf("El int es:%d\n",n);
+	//printf("El int es:%d\n",n);
 	nodo_proceso *aux=(nodo_proceso *)malloc(sizeof(nodo_proceso));
 	nodo_proceso *siguiente=(nodo_proceso *)malloc(sizeof(nodo_proceso));
 	nodo_proceso *anterior=(nodo_proceso *)malloc(sizeof(nodo_proceso));

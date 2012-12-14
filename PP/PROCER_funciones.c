@@ -47,7 +47,7 @@ int verificar_fin_ejecucion(proceso proceso,unsigned int cont_quantum,unsigned i
 
 			pthread_mutex_lock(&mutexListaFinQuantum);
 			agregar_proceso(listaFinQuantum,proceso);
-			printf("Agregue el proceso %d a fin de quantum\n",proceso.pcb.pid);
+			//printf("Agregue el proceso %d a fin de quantum\n",proceso.pcb.pid);
 			pthread_mutex_unlock(&mutexListaFinQuantum);
 			sem_post(sem_sts);
 

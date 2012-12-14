@@ -73,9 +73,9 @@ void * IOT_funcion(){
 						logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"INFO","Sleep imprimir instruccion.espera");
 					}
 
-					char msj_seg[256];
-					sprintf(msj_seg,"Estoy imprimiendo en el hilo %lu.",id_hilo);
-					enviar_mensaje(msj_seg,instruccion.proceso.cliente_sock);
+//					char msj_seg[256];
+//					sprintf(msj_seg,"Estoy imprimiendo en el hilo %lu.",id_hilo);
+//					enviar_mensaje(msj_seg,instruccion.proceso.cliente_sock);
 
 					enviar_mensaje(instruccion.mensaje,instruccion.proceso.cliente_sock);
 
@@ -89,9 +89,10 @@ void * IOT_funcion(){
 
 				}else{
 					logx(instruccion.proceso.pcb.pid,"LTS_suspendido",id_hilo,"INFO","La instruccion es un io().");
-					char msj_seg[256];
-					sprintf(msj_seg,"Estoy esperando %d segundos, en el hilo %lu.",instruccion.espera,id_hilo);
-					enviar_mensaje(msj_seg,instruccion.proceso.cliente_sock);
+//					char msj_seg[256];
+//					sprintf(msj_seg,"Estoy esperando %d segundos, en el hilo %lu.",instruccion.espera,id_hilo);
+//					enviar_mensaje(msj_seg,instruccion.proceso.cliente_sock);
+
 					sleep(instruccion.espera);
 					logx(instruccion.proceso.pcb.pid,"IOT",id_hilo,"INFO","Sleep io() instruccion.espera.");
 

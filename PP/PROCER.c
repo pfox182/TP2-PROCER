@@ -54,14 +54,14 @@ void * PROCER_funcion(){
 		sem_wait(sem_procer);
 
 
-			printf("PROCER - Antes de sacar de listos hay %d procesos\n",cantidad_nodos(listaProcesosListos));
-			mostrar_lista(listaProcesosListos);
+			//printf("PROCER - Antes de sacar de listos hay %d procesos\n",cantidad_nodos(listaProcesosListos));
+			//mostrar_lista(listaProcesosListos);
 
 			pthread_mutex_lock(&mutexListaListos);
 			proceso proceso=sacar_proceso(listaProcesosListos);
 			pthread_mutex_unlock(&mutexListaListos);
 
-			printf("Saque el proceso %d de listos\n",proceso.pcb.pid);
+			//printf("Saque el proceso %d de listos\n",proceso.pcb.pid);
 
 
 

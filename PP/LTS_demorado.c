@@ -62,7 +62,7 @@ void * LTS_demorado(void * var){
 					enviar_mensaje("Enviame el codigo\n",socket_demorado);
 					recibir_mensaje(&buffer_2,socket_demorado);
 					recibir_mensaje(&prioridad,socket_demorado);
-					printf("Me llego la prioridad: %s\n",prioridad);
+					//printf("Me llego la prioridad: %s\n",prioridad);
 					proceso = crear_proceso(buffer_2,prioridad,socket_demorado);
 
 					bzero(paso_mensaje,256);

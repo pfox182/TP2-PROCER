@@ -180,7 +180,7 @@ int administrar_conexion(int cliente_sock,fd_set *master){
 			if( (retorno = validar_mps_mmp(cliente_sock)) ==0 ){
 
 				//Creamos el proceso
-				printf("Me llego la prioridad: %s\n",prioridad);
+				//printf("Me llego la prioridad: %s\n",prioridad);
 				proceso = crear_proceso(buffer,prioridad,cliente_sock);
 				bzero(paso_mensaje,256);
 				sprintf(paso_mensaje,"Se creo el proceso con PID=%d\n",proceso.pcb.pid);
